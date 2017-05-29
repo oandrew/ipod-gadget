@@ -1,9 +1,9 @@
 package main
 
 import (
-	"../../iap"
 	"bufio"
 	"bytes"
+	"git.andrewo.pw/andrew/ipod-gadget/iap"
 	"io"
 	"log"
 	"os"
