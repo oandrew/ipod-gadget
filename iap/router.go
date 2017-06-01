@@ -95,7 +95,7 @@ var lingoMap = map[LingoCmdId]LingoCmdHandler{
 	LingoCmdId{0x00, 0x07}: func(in IapPacket, out chan<- IapPacket) {
 		payload := bytes.Buffer{}
 		payload.Write([]byte{in.Payload[0], in.Payload[1]})
-		payload.WriteString("Andrew")
+		payload.WriteString("Fuck Apple!")
 		payload.WriteByte(0x00)
 		out <- IapPacket{LingoCmdId{0x00, 0x08}, payload.Bytes()}
 	},
@@ -126,7 +126,7 @@ var lingoMap = map[LingoCmdId]LingoCmdHandler{
 	LingoCmdId{0x0a, 0x03}: func(in IapPacket, out chan<- IapPacket) {
 		payload := bytes.Buffer{}
 		payload.Write([]byte{in.Payload[0], in.Payload[1]})
-		binary.Write(&payload, binary.BigEndian, uint32(48000))
+		binary.Write(&payload, binary.BigEndian, uint32(44100))
 		binary.Write(&payload, binary.BigEndian, uint32(0))
 		binary.Write(&payload, binary.BigEndian, uint32(0))
 		out <- IapPacket{LingoCmdId{0x0a, 0x04}, payload.Bytes()}

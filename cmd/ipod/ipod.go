@@ -1,12 +1,13 @@
 package main
 
 import (
-	"bufio"
+	_ "bufio"
 	"bytes"
 	"git.andrewo.pw/andrew/ipod-gadget/iap"
-	"io"
+	_ "io"
 	"log"
 	"os"
+	"syscall"
 )
 
 func main() {
@@ -16,54 +17,50 @@ func main() {
 		log.Fatal(err)
 	}
 
-	brw := bufio.NewReadWriter(bufio.NewReader(f), bufio.NewWriter(f))
-
 	readMsg := make(chan iap.IapPacket)
 	writeMsg := make(chan iap.IapPacket)
 
 	go iap.Route(readMsg, writeMsg)
 
 	go func() {
+
+		buf := bytes.NewBuffer(make([]byte, 1024))
 		for outputMsg := range writeMsg {
 			outputReport := iap.BuildReport(outputMsg)
 			log.Printf("Snd: %#v", outputReport)
-			outputReport.Ser(brw)
 
-			buf := bytes.Buffer{}
-			outputReport.Ser(&buf)
+			buf.Reset()
+			outputReport.Ser(buf)
 
 			log.Printf("Output: (%d) [ % 02X ]", buf.Len(), buf.Bytes())
-			brw.Flush()
+			f.Write(buf.Bytes())
 		}
 	}()
 
+	data := make([]byte, 1024)
+	epoll, _ := syscall.EpollCreate1(0)
+	syscall.EpollCtl(epoll, syscall.EPOLL_CTL_ADD, int(f.Fd()), &syscall.EpollEvent{Events: syscall.EPOLLIN})
+	events := make([]syscall.EpollEvent, 1)
 	for {
 
-		buf := bytes.Buffer{}
-		inputReport := iap.Report{}
-		inputReport.Deser(io.TeeReader(brw, &buf))
+		eventsReady, _ := syscall.EpollWait(epoll, events, -1)
+		if eventsReady < 1 {
+			continue
+		}
 
-		log.Printf("Input: (%d) [ % 02X ]", buf.Len(), buf.Bytes())
-		// if len(inputReport.Iap.Payload) < 2 {
-		// 	for i := 0; i < 2; i++ {
-		// 		inputReport.Iap.Payload = append(inputReport.Iap.Payload, 0x0)
-		// 	}
-		// }
+		n, err := f.Read(data)
+		if err != nil {
+			log.Printf("Error! Read %d", n)
+			continue
+		}
+		msgData := data[:n]
+		log.Printf("Input: (%d) [ % 02X ]", len(msgData), msgData)
+
+		inputReport := iap.Report{}
+		inputReport.Deser(bytes.NewReader(msgData))
 
 		log.Printf("Rcv: %#v", inputReport)
 		readMsg <- inputReport.Iap
-
-		for {
-			b, err := brw.ReadByte()
-			if err != nil {
-				//log.Printf("Error: %v", err)
-				break
-			}
-			if b != 0x00 {
-				brw.UnreadByte()
-				break
-			}
-		}
 
 	}
 
