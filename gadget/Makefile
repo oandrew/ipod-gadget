@@ -6,6 +6,7 @@ obj-m += g_ipod.o
 
 ccflags-y += -DDEBUG
 ccflags-y += -DVERBOSE_DEBUG
+ccflags-y += -I$(src)
 
 all:
 	make -C $(KERNEL_PATH) M=$(PWD) modules

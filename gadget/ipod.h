@@ -33,7 +33,7 @@ static struct usb_device_descriptor device_desc = {
 	/* .bMaxPacketSize0 = f(hardware) */
 	.idVendor =		cpu_to_le16(IPOD_USB_VENDOR),
 	.idProduct =		cpu_to_le16(IPOD_USB_PRODUCT),
-	/* .bcdDevice = f(hardware) */
+	.bcdDevice = cpu_to_le16(0x0401),
 	/* .iManufacturer = DYNAMIC */
 	/* .iProduct = DYNAMIC */
 	/* NO SERIAL NUMBER */
@@ -132,13 +132,24 @@ static DECLARE_UAC_FORMAT_TYPE_I_DISCRETE_DESC(9) ipod_audio_stream_1_uac_discre
 	.tSamFreq =	{{0x40, 0x1F, 0x00}, {0x11, 0x2B, 0x00}, {0xE0, 0x2E, 0x00}, {0x80, 0x3E, 0x00}, {0x22, 0x56, 0x00}, {0xC0, 0x5D, 0x00}, {0x00, 0x7D, 0x00}, {0x44, 0xAC, 0x00}, {0x80, 0xBB, 0x00}}
 };
 
-static struct usb_endpoint_descriptor ipod_audio_stream_1_endpoint = {
+static struct usb_endpoint_descriptor ipod_audio_stream_1_endpoint_fs = {
 	.bLength =		USB_DT_ENDPOINT_AUDIO_SIZE,
 	.bDescriptorType =	USB_DT_ENDPOINT  ,
 	.bEndpointAddress =  1 | USB_DIR_IN ,
-	.bmAttributes =	USB_ENDPOINT_XFER_ISOC,
+	.bmAttributes =	USB_ENDPOINT_XFER_ISOC | USB_ENDPOINT_SYNC_NONE,
 	.wMaxPacketSize =	cpu_to_le16(192),
 	.bInterval =	1,
+	.bRefresh =	0,
+	.bSynchAddress = 0
+};
+
+static struct usb_endpoint_descriptor ipod_audio_stream_1_endpoint_hs = {
+	.bLength =		USB_DT_ENDPOINT_AUDIO_SIZE,
+	.bDescriptorType =	USB_DT_ENDPOINT  ,
+	.bEndpointAddress =  1 | USB_DIR_IN ,
+	.bmAttributes =	USB_ENDPOINT_XFER_ISOC | USB_ENDPOINT_SYNC_NONE,
+	.wMaxPacketSize =	cpu_to_le16(192),
+	.bInterval =	4,
 	.bRefresh =	0,
 	.bSynchAddress = 0
 };
@@ -148,13 +159,13 @@ static struct uac_iso_endpoint_descriptor ipod_audio_stream_1_endpoint_uac = {
 	.bDescriptorType =	37  ,
 	.bDescriptorSubtype =  1 ,
 	.bmAttributes =	1,
-	.bLockDelayUnits =	1,
-	.wLockDelay =	cpu_to_le16(0x1)
+	.bLockDelayUnits =	0,
+	.wLockDelay =	cpu_to_le16(0x0)
 };
 
 
 
-static struct usb_descriptor_header *ipod_audio_desc_hs_fs[] = {
+static struct usb_descriptor_header *ipod_audio_desc_fs[] = {
 	(struct usb_descriptor_header *) &ipod_audio_control_desc,
 	(struct usb_descriptor_header *) &ipod_audio_control_uac_header,
 	(struct usb_descriptor_header *) &ipod_audio_control_uac_input_terminal,
@@ -164,11 +175,25 @@ static struct usb_descriptor_header *ipod_audio_desc_hs_fs[] = {
 	(struct usb_descriptor_header *) &ipod_audio_stream_1_desc,
 	(struct usb_descriptor_header *) &ipod_audio_stream_1_uac_header,
 	(struct usb_descriptor_header *) &ipod_audio_stream_1_uac_discrete,
-	(struct usb_descriptor_header *) &ipod_audio_stream_1_endpoint,
+	(struct usb_descriptor_header *) &ipod_audio_stream_1_endpoint_fs,
 	(struct usb_descriptor_header *) &ipod_audio_stream_1_endpoint_uac,
 	NULL
 };
 
+static struct usb_descriptor_header *ipod_audio_desc_hs[] = {
+	(struct usb_descriptor_header *) &ipod_audio_control_desc,
+	(struct usb_descriptor_header *) &ipod_audio_control_uac_header,
+	(struct usb_descriptor_header *) &ipod_audio_control_uac_input_terminal,
+	(struct usb_descriptor_header *) &ipod_audio_control_uac_output_terminal,
+
+	(struct usb_descriptor_header *) &ipod_audio_stream_0_desc,
+	(struct usb_descriptor_header *) &ipod_audio_stream_1_desc,
+	(struct usb_descriptor_header *) &ipod_audio_stream_1_uac_header,
+	(struct usb_descriptor_header *) &ipod_audio_stream_1_uac_discrete,
+	(struct usb_descriptor_header *) &ipod_audio_stream_1_endpoint_hs,
+	(struct usb_descriptor_header *) &ipod_audio_stream_1_endpoint_uac,
+	NULL
+};
 
 
 // ==== HID

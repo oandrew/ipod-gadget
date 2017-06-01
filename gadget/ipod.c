@@ -19,6 +19,9 @@
 #include <sound/pcm_params.h>
 #include <linux/platform_device.h>
 
+#define CREATE_TRACE_POINTS
+#include "trace.h"
+
 
 
 #define DRIVER_DESC		"Linux USB Ipod Audio Gadget"
@@ -26,12 +29,14 @@
 #define REPORT_LENGTH 	64
 
 
-#define BUFFER_BYTES_MAX	1024*1024
-//#define PRD_SIZE_MAX	PAGE_SIZE
-//#define MIN_PERIODS	1
+#define BUFFER_BYTES_MAX	(PAGE_SIZE * 16)
+#define PRD_SIZE_MAX	PAGE_SIZE
+//#define PRD_SIZE_MIN	1024
 
-#define NUM_USB_AUDIO_TRANSFERS 2 
-#define MAX_USB_AUDIO_PACKET_SIZE 192
+#define MIN_PERIODS	4
+
+#define NUM_USB_AUDIO_TRANSFERS 16 
+#define MAX_USB_AUDIO_PACKET_SIZE 180
 
 
 #include "ipod.h"
@@ -70,14 +75,16 @@ static struct snd_pcm_hardware ipod_audio_hw = {
 	.info = SNDRV_PCM_INFO_INTERLEAVED | SNDRV_PCM_INFO_BLOCK_TRANSFER
 		 | SNDRV_PCM_INFO_MMAP | SNDRV_PCM_INFO_MMAP_VALID
 		 | SNDRV_PCM_INFO_PAUSE | SNDRV_PCM_INFO_RESUME,
-	.rates = SNDRV_PCM_RATE_48000,
-  .rate_min = 48000,
-  .rate_max = 48000,
+	.rates = SNDRV_PCM_RATE_44100,
+  .rate_min = 44100,
+  .rate_max = 44100,
 	.buffer_bytes_max = BUFFER_BYTES_MAX,
-  .period_bytes_min = 64,
-	.period_bytes_max = 512*1024,
-	.periods_min = 2,
-	.periods_max = 1024,
+	//.period_bytes_max = PRD_SIZE_MAX,
+	//.period_bytes_min = MAX_USB_AUDIO_PACKET_SIZE,
+	.period_bytes_min = 180/2,
+	.period_bytes_max = PRD_SIZE_MAX,
+	.periods_min = MIN_PERIODS,
+	.periods_max = BUFFER_BYTES_MAX / PRD_SIZE_MAX,
   .channels_min = 2,
   .channels_max = 2,
   .formats = SNDRV_PCM_FMTBIT_S16_LE,
@@ -95,7 +102,7 @@ static int ipod_audio_pcm_open(struct snd_pcm_substream *substream)
 
 	} 
 
-	//snd_pcm_hw_constraint_integer(runtime, SNDRV_PCM_HW_PARAM_PERIODS);
+	snd_pcm_hw_constraint_integer(runtime, SNDRV_PCM_HW_PARAM_PERIODS);
 
 	return 0;
 }
@@ -197,12 +204,10 @@ static void ipod_audio_iso_complete(struct usb_ep *ep, struct usb_request *req)
 	bool update_alsa = false;
 	struct snd_pcm_substream *substream;
 
+  //trace_ipod_req_out_done(req);
+
 	if (req->status == -ESHUTDOWN)
 		return;
-
-	//if (req->status)
-	//	printk("%s: iso_complete status(%d) %d/%d\n",
-	//		__func__, req->status, req->actual, req->length);
 
 	substream = ipod_audio_data.ss;
 
@@ -211,15 +216,15 @@ static void ipod_audio_iso_complete(struct usb_ep *ep, struct usb_request *req)
 
 	spin_lock_irqsave(&ipod_audio_data.play_lock, flags);
 
-  /*if(ipod_audio_data.cnt < 9) {
-    req->length = 192;
+  if(ipod_audio_data.cnt < 9) {
+    req->length = 176;
     req->actual = 176;
   } else {
-    req->length = 192;
+    req->length = 180;
     req->actual = 180;
   }
   ipod_audio_data.cnt = (ipod_audio_data.cnt+1)%10;
-*/
+
 	pending = ipod_audio_data.hw_ptr % ipod_audio_data.period_size;
 	pending += req->actual;
 	if (pending >= ipod_audio_data.period_size)
@@ -235,6 +240,7 @@ static void ipod_audio_iso_complete(struct usb_ep *ep, struct usb_request *req)
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		if (unlikely(pending < req->actual)) {
+      //printk("Oops: %d / %d \n", pending, req->actual);
 			memcpy(req->buf, ipod_audio_data.dma_area + hw_ptr, pending);
 			memcpy(req->buf + pending, ipod_audio_data.dma_area,
 			       req->actual - pending);
@@ -263,24 +269,17 @@ int ipod_audio_control_bind(struct usb_configuration * conf, struct usb_function
 	DBG(conf->cdev, " = %s() \n", __FUNCTION__);
 	usb_interface_id(conf,func);
 	usb_interface_id(conf,func);
-	func->fs_descriptors = ipod_audio_desc_hs_fs;
-	func->hs_descriptors = ipod_audio_desc_hs_fs;
 
-	ipod_audio_data.in_ep = usb_ep_autoconfig(conf->cdev->gadget, &ipod_audio_stream_1_endpoint);
+	ipod_audio_data.in_ep = usb_ep_autoconfig(conf->cdev->gadget, &ipod_audio_stream_1_endpoint_fs);
 	ipod_audio_data.alt = 0;
 
 	ipod_audio_data.rbuf = kzalloc(MAX_USB_AUDIO_PACKET_SIZE * NUM_USB_AUDIO_TRANSFERS, GFP_KERNEL);
 
   ipod_audio_data.in_req = kzalloc(NUM_USB_AUDIO_TRANSFERS * sizeof(struct usb_request *),GFP_KERNEL);
-  int i;
-  for(i=0;i<NUM_USB_AUDIO_TRANSFERS;i++) {
-	ipod_audio_data.in_req[i] = usb_ep_alloc_request(ipod_audio_data.in_ep, GFP_KERNEL);
-	ipod_audio_data.in_req[i]->zero = 0;
-	ipod_audio_data.in_req[i]->length = MAX_USB_AUDIO_PACKET_SIZE;
-	ipod_audio_data.in_req[i]->complete = ipod_audio_iso_complete;
-	ipod_audio_data.in_req[i]->buf = ipod_audio_data.rbuf + i*MAX_USB_AUDIO_PACKET_SIZE;
-  }
 
+	//func->fs_descriptors = ipod_audio_desc_fs;
+	//func->hs_descriptors = ipod_audio_desc_hs;
+  usb_assign_descriptors(func, ipod_audio_desc_fs, ipod_audio_desc_hs, NULL, NULL);
 
 	//AUDIO CARD
 	ipod_audio_data.pdev = platform_device_alloc("snd_usb_ipod", -1);
@@ -393,20 +392,6 @@ int ipod_audio_control_setup(struct usb_function * func, const struct usb_ctrlre
 				ERROR(cdev, "usb_ep_queue error on ep0 %d\n", status);
 				return status;
 			}
-			if (ipod_audio_data.alt == 1) {
-        //unsigned long flags;
-	      //spin_lock_irqsave(&ipod_audio_data.play_lock, flags);
-        int i;
-        for(i=0;i<NUM_USB_AUDIO_TRANSFERS; i++) {
-				status = usb_ep_queue(ipod_audio_data.in_ep, ipod_audio_data.in_req[i], GFP_ATOMIC);
-				if (status < 0) {
-					ERROR(cdev, "usb_ep_queue error on ep0 %d\n", status);
-	        //spin_unlock_irqrestore(&ipod_audio_data.play_lock, flags);
-					return status;
-				}
-        }
-        //spin_unlock_irqrestore(&ipod_audio_data.play_lock, flags);
-			}
 			
 			return status;
 			break;
@@ -450,8 +435,28 @@ int ipod_audio_control_set_alt(struct usb_function * func,  unsigned interface, 
 					return ret;
 				}
 
-				
 				ipod_audio_data.alt = 1;
+        if (ipod_audio_data.alt == 1) {
+          //unsigned long flags;
+          //spin_lock_irqsave(&ipod_audio_data.play_lock, flags);
+          int i;
+          int err;
+          for(i=0;i<NUM_USB_AUDIO_TRANSFERS; i++) {
+            ipod_audio_data.in_req[i] = usb_ep_alloc_request(ipod_audio_data.in_ep, GFP_ATOMIC);
+            ipod_audio_data.in_req[i]->zero = 0;
+            ipod_audio_data.in_req[i]->length = MAX_USB_AUDIO_PACKET_SIZE;
+            ipod_audio_data.in_req[i]->complete = ipod_audio_iso_complete;
+            ipod_audio_data.in_req[i]->buf = ipod_audio_data.rbuf + i*MAX_USB_AUDIO_PACKET_SIZE;
+            err = usb_ep_queue(ipod_audio_data.in_ep, ipod_audio_data.in_req[i], GFP_ATOMIC);
+            if (err < 0) {
+              ERROR(func->config->cdev, "usb_ep_queue error on ep0 %d\n", err);
+              //spin_unlock_irqrestore(&ipod_audio_data.play_lock, flags);
+              return err;
+            }
+          }
+          //spin_unlock_irqrestore(&ipod_audio_data.play_lock, flags);
+        }
+				
 				
 			}
 		}
@@ -866,9 +871,10 @@ int ipod_config_setup(struct usb_configuration * conf, const struct usb_ctrlrequ
 
 static struct usb_configuration ipod_configuration = {
 	.label			= "iPod interface",
-	.bConfigurationValue	= 2,
+	.bConfigurationValue	= 1,
 	/* .iConfiguration = DYNAMIC */
 	.bmAttributes		= USB_CONFIG_ATT_SELFPOWER,
+  .MaxPower = 250,
 	.unbind  	= ipod_config_unbind,
 	.setup = ipod_config_setup
 };
