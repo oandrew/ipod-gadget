@@ -417,8 +417,10 @@ int ipod_audio_control_set_alt(struct usb_function * func,  unsigned interface, 
 		if (ipod_audio_data.in_ep != NULL) {
 			if (alt == 0) {
 				int i;
+        if(ipod_audio_data.alt == 1) {
         for(i=0;i<NUM_USB_AUDIO_TRANSFERS; i++){
 				usb_ep_dequeue(ipod_audio_data.in_ep, ipod_audio_data.in_req[i]);
+        }
         }
 				usb_ep_disable(ipod_audio_data.in_ep);
 				ipod_audio_data.alt = 0;
@@ -496,9 +498,9 @@ static struct  usb_function ipod_audio_control_function = {
 // ===== HID handling
 
 struct ipod_req_list {
-	struct usb_request	*req;
-	unsigned int		pos;
 	struct list_head 	list;
+	unsigned int		len;
+  void * buf;
 };
 
 
@@ -541,14 +543,20 @@ static void ipod_hid_out_complete(struct usb_ep *ep, struct usb_request *req)
 {
 	struct ipod_req_list *item;
 	unsigned long flags;
-
+  int i;
 	printk(" %s() len=%d actual=%d \n", __FUNCTION__, req->length, req->actual);
+  /*for(i = 0; i < min_t(int, req->actual, 16); i++) {
+    printk("%02X ", *((unsigned char *)req->buf + i));
+  }
+	printk("] \n");*/
 
 	item = kzalloc(sizeof(*item), GFP_ATOMIC);
 	if (!item)
 		return;
 
-	item->req = req;
+	item->len = req->actual;
+  item->buf = kzalloc(req->actual, GFP_ATOMIC);
+  memcpy(item->buf, req->buf, req->actual);
 
 	spin_lock_irqsave(&ipod_hid_data.spinlock, flags);
 	list_add_tail(&item->list, &ipod_hid_data.completed_out_req);
@@ -571,7 +579,7 @@ static ssize_t ipod_hid_dev_read(struct file *file, char __user *buffer,
 			size_t count, loff_t *ptr)
 {
 	
-	struct ipod_req_list *list;
+	struct ipod_req_list *item;
 	struct usb_request *req;
 	unsigned long flags;
 
@@ -594,18 +602,16 @@ static ssize_t ipod_hid_dev_read(struct file *file, char __user *buffer,
 		spin_lock_irqsave(&ipod_hid_data.spinlock, flags);
 	}
 
-	list = list_first_entry(&ipod_hid_data.completed_out_req, struct ipod_req_list, list);
-	req = list->req;
-	count = min_t(unsigned int, count, req->actual - list->pos);
+	item = list_first_entry(&ipod_hid_data.completed_out_req, struct ipod_req_list, list);
 	spin_unlock_irqrestore(&ipod_hid_data.spinlock, flags);
 
-	count -= copy_to_user(buffer, req->buf + list->pos, count);
-	list->pos += count;
+  count = item->len;
 
-	if (list->pos == req->actual) {
+	if(copy_to_user(buffer, item->buf, item->len)==0) {
 		spin_lock_irqsave(&ipod_hid_data.spinlock, flags);
-		list_del(&list->list);
-		kfree(list);
+		list_del(&item->list);
+    kfree(item->buf);
+		kfree(item);
 		spin_unlock_irqrestore(&ipod_hid_data.spinlock, flags);
 	}
 
