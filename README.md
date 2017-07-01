@@ -39,7 +39,7 @@ kernel module (linux kernel need to be compiled with usb gadget configfs support
 cd gadget
 make
 # or cross compiling with  custom linux kernel source path
-make KERNEL_PATH=/home/andrew/pi-linux CROSS_COMPILE=arm-linux-gnueabi-
+make ARCH=arm CROSS_COMPILE=arm-linux-gnueabi- KERNEL_PATH=/home/andrew/pi-linux 
 
 #load the module
 modprobe libcomposite
