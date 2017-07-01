@@ -95,7 +95,7 @@ var lingoMap = map[LingoCmdId]LingoCmdHandler{
 	LingoCmdId{0x00, 0x07}: func(in IapPacket, out chan<- IapPacket) {
 		payload := bytes.Buffer{}
 		payload.Write([]byte{in.Payload[0], in.Payload[1]})
-		payload.WriteString("Fuck Apple!")
+		payload.WriteString("Ipod Gadget")
 		payload.WriteByte(0x00)
 		out <- IapPacket{LingoCmdId{0x00, 0x08}, payload.Bytes()}
 	},
