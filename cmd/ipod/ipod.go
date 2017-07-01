@@ -3,7 +3,7 @@ package main
 import (
 	_ "bufio"
 	"bytes"
-	"git.andrewo.pw/andrew/ipod-gadget/iap"
+	"github.com/oandrew/ipod-gadget/iap"
 	_ "io"
 	"log"
 	"os"
