@@ -5,6 +5,7 @@ ipod-gadget simulates an iPod USB device to stream digital audio to iPod compati
 It speaks iAP(iPod Accessory Protocol) and starts an audio streaming session.
 
 Tested on Raspberry Pi Zero, Beaglebone Black and Nexus 5(mainline linux kernel) with Onkyo HT-R391 receiver as the host device (more host devices need to be tested).
+Should work on any device that runs Linux 4.x (compiled with usb gadget configfs) and has a USB port that supports peripheral mode.
 
 
 # implementation
@@ -12,7 +13,7 @@ It consists of two parts - linux kernel module and  client app (Golang).
 ## kernel module
  
 The kernel module takes care of the USB device gadget side. 
-An iPod, when plugged in a dock, presents an USB configuration with 2 interfaces:
+An iPod, when plugged in a dock, presents a USB configuration with 2 interfaces:
 1. UAC1(USB Audio Class 1) - standart usb audio streaming interface.
 2. HID - bidirectional transport for iAP packets.
 
@@ -45,7 +46,7 @@ modprobe libcomposite
 insmod g_ipod.ko
 ```
 
-client
+client (golang)
 ```
 cd cmd/ipod
 go get -d
