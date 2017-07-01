@@ -30,7 +30,7 @@ TRACE_EVENT(ipod_req_out_done,
 			__entry->status = req->status;
 	),
 
-	TP_printk("out_done: %08x %3d/%3d stream:%d status:%d ", __entry->ptr, __entry->actual, __entry->length, __entry->stream_id, __entry->status)
+	TP_printk("out_done: %p %3d/%3d stream:%d status:%d ", __entry->ptr, __entry->actual, __entry->length, __entry->stream_id, __entry->status)
 );
 
 #endif

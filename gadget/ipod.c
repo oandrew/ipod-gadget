@@ -277,9 +277,11 @@ int ipod_audio_control_bind(struct usb_configuration * conf, struct usb_function
 
   ipod_audio_data.in_req = kzalloc(NUM_USB_AUDIO_TRANSFERS * sizeof(struct usb_request *),GFP_KERNEL);
 
-	//func->fs_descriptors = ipod_audio_desc_fs;
-	//func->hs_descriptors = ipod_audio_desc_hs;
-  usb_assign_descriptors(func, ipod_audio_desc_fs, ipod_audio_desc_hs, NULL, NULL);
+	func->fs_descriptors = ipod_audio_desc_fs;
+	func->hs_descriptors = ipod_audio_desc_hs;
+  
+  //not consistent with different kernel versions
+  //usb_assign_descriptors(func, ipod_audio_desc_fs, ipod_audio_desc_hs, NULL, NULL);
 
 	//AUDIO CARD
 	ipod_audio_data.pdev = platform_device_alloc("snd_usb_ipod", -1);
@@ -334,6 +336,7 @@ pdev_fail:
 
 void ipod_audio_control_unbind(struct usb_configuration * conf, struct usb_function * func) {
 
+  int i;
 
 	DBG(conf->cdev, " = %s() \n", __FUNCTION__);
 
@@ -353,7 +356,6 @@ void ipod_audio_control_unbind(struct usb_configuration * conf, struct usb_funct
 
 	
 	
-  int i;
   for(i = 0; i < NUM_USB_AUDIO_TRANSFERS; i++) {
 	usb_ep_free_request(ipod_audio_data.in_ep, ipod_audio_data.in_req[i]);
   }
@@ -410,13 +412,14 @@ int ipod_audio_control_setup(struct usb_function * func, const struct usb_ctrlre
 
 int ipod_audio_control_set_alt(struct usb_function * func,  unsigned interface, unsigned alt) {
 	int ret = 0;
+  int i;
+  int err;
 
 	DBG(func->config->cdev, " = %s() \n", __FUNCTION__);
 
 	if (interface == 1) {
 		if (ipod_audio_data.in_ep != NULL) {
 			if (alt == 0) {
-				int i;
         if(ipod_audio_data.alt == 1) {
         for(i=0;i<NUM_USB_AUDIO_TRANSFERS; i++){
 				usb_ep_dequeue(ipod_audio_data.in_ep, ipod_audio_data.in_req[i]);
@@ -441,8 +444,6 @@ int ipod_audio_control_set_alt(struct usb_function * func,  unsigned interface, 
         if (ipod_audio_data.alt == 1) {
           //unsigned long flags;
           //spin_lock_irqsave(&ipod_audio_data.play_lock, flags);
-          int i;
-          int err;
           for(i=0;i<NUM_USB_AUDIO_TRANSFERS; i++) {
             ipod_audio_data.in_req[i] = usb_ep_alloc_request(ipod_audio_data.in_ep, GFP_ATOMIC);
             ipod_audio_data.in_req[i]->zero = 0;
@@ -543,7 +544,6 @@ static void ipod_hid_out_complete(struct usb_ep *ep, struct usb_request *req)
 {
 	struct ipod_req_list *item;
 	unsigned long flags;
-  int i;
 	printk(" %s() len=%d actual=%d \n", __FUNCTION__, req->length, req->actual);
   /*for(i = 0; i < min_t(int, req->actual, 16); i++) {
     printk("%02X ", *((unsigned char *)req->buf + i));
@@ -580,7 +580,7 @@ static ssize_t ipod_hid_dev_read(struct file *file, char __user *buffer,
 {
 	
 	struct ipod_req_list *item;
-	struct usb_request *req;
+	//struct usb_request *req;
 	unsigned long flags;
 
 	if (!count)
@@ -622,7 +622,7 @@ static ssize_t ipod_hid_dev_write(struct file *file, const char __user *buffer, 
 {
 	ssize_t status = -ENOMEM;
 
-	printk(" iap write %d \n",count);
+	printk(" iap write %zu \n",count);
 
 	if (!access_ok(VERIFY_READ, buffer, count))
 		return -EFAULT;
@@ -749,7 +749,7 @@ int ipod_hid_bind(struct usb_configuration * conf, struct usb_function * func) {
 	
 	
 
-	return 0;
+	return ret;
 }
 
 void ipod_hid_unbind(struct usb_configuration * conf, struct usb_function * func) {
@@ -805,8 +805,8 @@ int ipod_hid_setup(struct usb_function * func, const struct usb_ctrlrequest * ct
 			break;
 	}
 
-stall:
-	return -EOPNOTSUPP;
+//stall:
+//	return -EOPNOTSUPP;
 
 respond:
 	req->zero = 0;
@@ -894,7 +894,7 @@ static struct usb_configuration ipod_configuration = {
 
 
 static int ipod_bind(struct usb_composite_dev *cdev) {
-	int ret;
+	int ret = 0;
 
 	DBG(cdev, " = %s() \n", __FUNCTION__);
 	composite_dev = cdev;
@@ -908,7 +908,7 @@ static int ipod_bind(struct usb_composite_dev *cdev) {
 	
 
 	usb_add_config(cdev,&ipod_configuration,ipod_config_bind);
-	return 0;
+	return ret;
 }
 
 static int ipod_unbind(struct usb_composite_dev * cdev) {

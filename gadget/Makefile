@@ -1,4 +1,4 @@
-#KERNEL_PATH = ~/beagle/linux
+KERNEL_PATH ?= /lib/modules/`uname -r`/build
 
 
 g_ipod-y := ipod.o
