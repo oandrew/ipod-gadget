@@ -37,7 +37,7 @@ static struct usb_device_descriptor device_desc = {
 	/* .iManufacturer = DYNAMIC */
 	/* .iProduct = DYNAMIC */
 	/* NO SERIAL NUMBER */
-	.bNumConfigurations =	1,
+	.bNumConfigurations =	2,
 };
 
 //static const struct usb_descriptor_header *otg_desc[2];
