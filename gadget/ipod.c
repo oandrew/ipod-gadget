@@ -202,6 +202,9 @@ static void ipod_audio_iso_complete(struct usb_ep *ep, struct usb_request *req)
 	if (req->status == -ESHUTDOWN)
 		return;
 
+	if (ipod_audio_data.dma_area == NULL)
+		goto exit;
+
 	substream = ipod_audio_data.ss;
 
 	if (!substream)
