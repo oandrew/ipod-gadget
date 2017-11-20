@@ -721,20 +721,20 @@ static int hid_dev_is_opened = 0;
 
 static int ipod_hid_dev_open(struct inode *inode, struct file *fd)
 {
-  int err = 0;
+	int err = 0;
 
-  mutex_lock(&hid_dev_mutex);
-  if(hid_dev_is_opened == 0) 
-  {
-	  printk("ipod device opened \n");
-	  usb_composite_probe(&ipod_driver);
-    hid_dev_is_opened = 1;
-  } 
-  else 
-  {
-    err = -EBUSY;
-  }
-  mutex_unlock(&hid_dev_mutex);
+	mutex_lock(&hid_dev_mutex);
+	if (hid_dev_is_opened == 0)
+	{
+		printk("ipod device opened \n");
+		usb_composite_probe(&ipod_driver);
+		hid_dev_is_opened = 1;
+	}
+	else
+	{
+		err = -EBUSY;
+	}
+	mutex_unlock(&hid_dev_mutex);
 
 	return err;
 }
@@ -742,14 +742,14 @@ static int ipod_hid_dev_open(struct inode *inode, struct file *fd)
 static int ipod_hid_dev_release(struct inode *inode, struct file *fd)
 {
 
-  mutex_lock(&hid_dev_mutex);
-  if(hid_dev_is_opened == 1) 
-  {
-	  usb_composite_unregister(&ipod_driver);
-    hid_dev_is_opened = 0;
-	  printk("ipod device closed \n");
-  }
-  mutex_unlock(&hid_dev_mutex);
+	mutex_lock(&hid_dev_mutex);
+	if (hid_dev_is_opened == 1)
+	{
+		usb_composite_unregister(&ipod_driver);
+		hid_dev_is_opened = 0;
+		printk("ipod device closed \n");
+	}
+	mutex_unlock(&hid_dev_mutex);
 	return 0;
 }
 
