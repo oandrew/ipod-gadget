@@ -4,8 +4,9 @@
 ## update
 New library and app are now at https://github.com/oandrew/ipod !
 
-Totally rewritten from scratch and new features that should help with debugging/troubleshooting.
-Join gitter chat for questions.
+Totally rewritten from scratch and with new features that should help with debugging/troubleshooting.
+
+Join gitter chat for any questions.
 
 ---
 
