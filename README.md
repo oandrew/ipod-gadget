@@ -1,4 +1,14 @@
 # ipod-gadget
+[![Join the chat at https://gitter.im/ipod-gadget/Lobby](https://badges.gitter.im/ipod-gadget/Lobby.svg)](https://gitter.im/ipod-gadget/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
+## update
+New library and app are now at https://github.com/oandrew/ipod !
+
+Totally rewritten from scratch and new features that should help with debugging/troubleshooting.
+Join gitter chat for questions.
+
+---
+
 iPod usb audio gadget
 
 ipod-gadget simulates an iPod USB device to stream digital audio to iPod compatible devices/docks.
