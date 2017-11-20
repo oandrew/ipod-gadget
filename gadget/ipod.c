@@ -716,19 +716,40 @@ static unsigned int ipod_hid_dev_poll(struct file *file, poll_table *wait)
 	return ret;
 }
 
+DEFINE_MUTEX(hid_dev_mutex);
+static int hid_dev_is_opened = 0;
+
 static int ipod_hid_dev_open(struct inode *inode, struct file *fd)
 {
-	printk("ipod device opened \n");
-	usb_composite_probe(&ipod_driver);
+  int err = 0;
 
-	return 0;
+  mutex_lock(&hid_dev_mutex);
+  if(hid_dev_is_opened == 0) 
+  {
+	  printk("ipod device opened \n");
+	  usb_composite_probe(&ipod_driver);
+    hid_dev_is_opened = 1;
+  } 
+  else 
+  {
+    err = -EBUSY;
+  }
+  mutex_unlock(&hid_dev_mutex);
+
+	return err;
 }
 
 static int ipod_hid_dev_release(struct inode *inode, struct file *fd)
 {
 
-	usb_composite_unregister(&ipod_driver);
-	printk("ipod device closed \n");
+  mutex_lock(&hid_dev_mutex);
+  if(hid_dev_is_opened == 1) 
+  {
+	  usb_composite_unregister(&ipod_driver);
+    hid_dev_is_opened = 0;
+	  printk("ipod device closed \n");
+  }
+  mutex_unlock(&hid_dev_mutex);
 	return 0;
 }
 
