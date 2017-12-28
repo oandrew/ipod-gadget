@@ -602,10 +602,10 @@ static void ipod_hid_in_complete(struct usb_ep *ep, struct usb_request *req)
 	}
 	//printk(" %s() %d/%d status=%d \n", __FUNCTION__, req->actual, req->length, req->status);
 
-	spin_lock_irqsave(&ipod_hid_data.write_queue.lock, flags);
+	spin_lock_irq(&ipod_hid_data.write_queue.lock);
 	ipod_hid_data.write_pending = 0;
 	wake_up_locked(&ipod_hid_data.write_queue);
-	spin_unlock_irqrestore(&ipod_hid_data.write_queue.lock, flags);
+	spin_unlock_irq(&ipod_hid_data.write_queue.lock);
 
 }
 
