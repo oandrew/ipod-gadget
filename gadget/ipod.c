@@ -13,6 +13,7 @@
 #include <linux/uaccess.h>
 #include <linux/types.h>
 #include <linux/poll.h>
+#include <linux/kfifo.h>
 
 #include <sound/core.h>
 #include <sound/pcm.h>
@@ -24,7 +25,7 @@
 
 #define DRIVER_DESC "Linux USB Ipod Audio Gadget"
 #define DRIVER_VERSION "June, 2016"
-#define REPORT_LENGTH 64
+#define REPORT_LENGTH 1024
 
 #define BUFFER_BYTES_MAX (PAGE_SIZE * 16)
 #define PRD_SIZE_MAX PAGE_SIZE
@@ -32,7 +33,7 @@
 
 #define MIN_PERIODS 4
 
-#define NUM_USB_AUDIO_TRANSFERS 16
+#define NUM_USB_AUDIO_TRANSFERS 4
 #define MAX_USB_AUDIO_PACKET_SIZE 180
 
 #include "ipod.h"
@@ -536,18 +537,24 @@ struct ipod_req_list
 	void *buf;
 };
 
+struct ipod_hid_report {
+	int len;
+	char buf[REPORT_LENGTH];
+};
+
 static struct
 {
 
 	// recv report
 	struct list_head completed_out_req;
-	spinlock_t spinlock;
+	struct mutex read_lock;
 	wait_queue_head_t read_queue;
-	unsigned int qlen;
+	//unsigned int qlen;
 
 	// send report
-	struct mutex write_lock;
+	
 	bool write_pending;
+	struct mutex write_lock;
 	wait_queue_head_t write_queue;
 	struct usb_request *in_req;
 	struct usb_ep *in_ep;
@@ -568,42 +575,51 @@ static void ipod_hid_out_complete(struct usb_ep *ep, struct usb_request *req)
 {
 	struct ipod_req_list *item;
 	unsigned long flags;
-	printk(" %s() len=%d actual=%d \n", __FUNCTION__, req->length, req->actual);
-	/*for(i = 0; i < min_t(int, req->actual, 16); i++) {
-    printk("%02X ", *((unsigned char *)req->buf + i));
-  }
-	printk("] \n");*/
-
+	trace_printk(" %s() len=%d actual=%d \n", __FUNCTION__, req->length, req->actual);
+	
 	item = kzalloc(sizeof(*item), GFP_ATOMIC);
 	if (!item)
 		return;
 
-	item->len = req->actual;
-	item->buf = kzalloc(req->actual, GFP_ATOMIC);
-	memcpy(item->buf, req->buf, req->actual);
+	item->len = req->length;
+	item->buf = kzalloc(req->length, GFP_ATOMIC);
+	memcpy(item->buf, req->buf, req->length);
 
-	spin_lock_irqsave(&ipod_hid_data.spinlock, flags);
+	spin_lock_irqsave(&ipod_hid_data.read_queue.lock, flags);
 	list_add_tail(&item->list, &ipod_hid_data.completed_out_req);
-	spin_unlock_irqrestore(&ipod_hid_data.spinlock, flags);
+	wake_up_locked(&ipod_hid_data.read_queue);
+	spin_unlock_irqrestore(&ipod_hid_data.read_queue.lock, flags);
 
-	wake_up(&ipod_hid_data.read_queue);
+	
 }
 
 static void ipod_hid_in_complete(struct usb_ep *ep, struct usb_request *req)
 {
+	unsigned long flags;
 	if (req->status != 0)
 	{
 		printk(" %s() in req error %d \n", __FUNCTION__, req->status);
 	}
+	//printk(" %s() %d/%d status=%d \n", __FUNCTION__, req->actual, req->length, req->status);
 
+	spin_lock_irqsave(&ipod_hid_data.write_queue.lock, flags);
 	ipod_hid_data.write_pending = 0;
-	wake_up(&ipod_hid_data.write_queue);
+	wake_up_locked(&ipod_hid_data.write_queue);
+	spin_unlock_irqrestore(&ipod_hid_data.write_queue.lock, flags);
+
+}
+
+static int ipod_mutex_lock(struct mutex *mutex, unsigned nonblock)
+{
+	return nonblock
+		? likely(mutex_trylock(mutex)) ? 0 : -EAGAIN
+		: mutex_lock_interruptible(mutex);
 }
 
 static ssize_t ipod_hid_dev_read(struct file *file, char __user *buffer,
 								 size_t count, loff_t *ptr)
 {
-
+	ssize_t status = -ENOMEM;
 	struct ipod_req_list *item;
 	//struct usb_request *req;
 	unsigned long flags;
@@ -611,90 +627,85 @@ static ssize_t ipod_hid_dev_read(struct file *file, char __user *buffer,
 	if (!count)
 		return 0;
 
-	if (!access_ok(VERIFY_WRITE, buffer, count))
-		return -EFAULT;
+	trace_printk(" iap read count=%d\n", count);
 
-	spin_lock_irqsave(&ipod_hid_data.spinlock, flags);
-
-	while (READ_LIST_EMPTY)
-	{
-		spin_unlock_irqrestore(&ipod_hid_data.spinlock, flags);
-		if (file->f_flags & O_NONBLOCK)
-			return -EAGAIN;
-
-		if (wait_event_interruptible(ipod_hid_data.read_queue, !READ_LIST_EMPTY))
-			return -ERESTARTSYS;
-
-		spin_lock_irqsave(&ipod_hid_data.spinlock, flags);
+	status = ipod_mutex_lock(&ipod_hid_data.read_lock, file->f_flags & O_NONBLOCK);
+	if(status < 0) {
+		printk("%s(): ret=%d\n", __FUNCTION__, status);
+		return status;
 	}
 
+	spin_lock_irq(&ipod_hid_data.read_queue.lock);
+	if(wait_event_interruptible_exclusive_locked_irq(ipod_hid_data.read_queue,!READ_LIST_EMPTY)) {
+		status = -EINTR;
+		goto unlock;
+	}
 	item = list_first_entry(&ipod_hid_data.completed_out_req, struct ipod_req_list, list);
-	spin_unlock_irqrestore(&ipod_hid_data.spinlock, flags);
 
-	count = item->len;
-
-	if (copy_to_user(buffer, item->buf, item->len) == 0)
-	{
-		spin_lock_irqsave(&ipod_hid_data.spinlock, flags);
+	if (copy_to_user(buffer, item->buf, item->len) == 0){
+		status = item->len;
 		list_del(&item->list);
 		kfree(item->buf);
 		kfree(item);
-		spin_unlock_irqrestore(&ipod_hid_data.spinlock, flags);
 	}
 
-	return count;
+unlock:
+	spin_unlock_irq(&ipod_hid_data.read_queue.lock);
+	mutex_unlock(&ipod_hid_data.read_lock);
+	return status;
 }
+
+
 
 static ssize_t ipod_hid_dev_write(struct file *file, const char __user *buffer, size_t count, loff_t *offp)
 {
 	ssize_t status = -ENOMEM;
 
-	printk(" iap write %zu \n", count);
+	trace_printk(" iap write %zu \n", count);
 
-	if (!access_ok(VERIFY_READ, buffer, count))
-		return -EFAULT;
-
-	mutex_lock(&ipod_hid_data.write_lock);
-	while (WRITE_PENDING)
-	{
-		mutex_unlock(&ipod_hid_data.write_lock);
-		if (file->f_flags & O_NONBLOCK)
-			return -EAGAIN;
-
-		if (wait_event_interruptible_exclusive(ipod_hid_data.write_queue, !WRITE_PENDING))
-			return -ERESTARTSYS;
-
-		mutex_lock(&ipod_hid_data.write_lock);
+	status = ipod_mutex_lock(&ipod_hid_data.write_lock, file->f_flags & O_NONBLOCK);
+	if(status < 0) {
+		printk("%s(): ret=%d\n", __FUNCTION__, status);
+		return status;
 	}
 
+	spin_lock_irq(&ipod_hid_data.write_queue.lock);
+	if(wait_event_interruptible_exclusive_locked_irq(ipod_hid_data.write_queue,!WRITE_PENDING)) {
+		status = -EINTR;
+		goto unlock;
+	}
+	
 	count = min_t(unsigned, count, REPORT_LENGTH);
 	status = copy_from_user(ipod_hid_data.in_req->buf, buffer, count);
 
-	if (status != 0)
-	{
+	if (status != 0) {
 		printk("copy_from_user error\n");
-		mutex_unlock(&ipod_hid_data.write_lock);
-		return -EINVAL;
+		goto unlock;
 	}
+	//printk("iap write: %*ph \n",(int)count, ipod_hid_data.in_req->buf);
 
 	ipod_hid_data.in_req->status = 0;
 	ipod_hid_data.in_req->zero = 0;
 	ipod_hid_data.in_req->length = count;
 	ipod_hid_data.in_req->complete = ipod_hid_in_complete;
 	ipod_hid_data.write_pending = 1;
+	
+	spin_unlock_irq(&ipod_hid_data.write_queue.lock);
 
 	status = usb_ep_queue(ipod_hid_data.in_ep, ipod_hid_data.in_req, GFP_ATOMIC);
-	if (status < 0)
-	{
+
+	spin_lock_irq(&ipod_hid_data.write_queue.lock);
+	if (status < 0) {
 		printk("usb_ep_queue error on int endpoint %zd\n", status);
 		ipod_hid_data.write_pending = 0;
-		wake_up(&ipod_hid_data.write_queue);
-	}
-	else
-	{
-		status = count;
+		goto unlock;
 	}
 
+	status = count;
+
+unlock:
+
+	spin_unlock_irq(&ipod_hid_data.write_queue.lock);
 	mutex_unlock(&ipod_hid_data.write_lock);
 
 	return status;
@@ -781,7 +792,8 @@ int ipod_hid_bind(struct usb_configuration *conf, struct usb_function *func)
 	ipod_hid_data.in_req->buf = kmalloc(REPORT_LENGTH, GFP_KERNEL);
 
 	mutex_init(&ipod_hid_data.write_lock);
-	spin_lock_init(&ipod_hid_data.spinlock);
+	mutex_init(&ipod_hid_data.read_lock);
+	//spin_lock_init(&ipod_hid_data.spinlock);
 	init_waitqueue_head(&ipod_hid_data.read_queue);
 	init_waitqueue_head(&ipod_hid_data.write_queue);
 	INIT_LIST_HEAD(&ipod_hid_data.completed_out_req);
@@ -1018,7 +1030,7 @@ static int ipod_bind(struct usb_composite_dev *cdev)
 
 	// AUDIO
 
-	usb_add_config(cdev, &ipod_configuration1, ipod_ptp_config_bind);
+	//usb_add_config(cdev, &ipod_configuration1, ipod_ptp_config_bind);
 	usb_add_config(cdev, &ipod_configuration2, ipod_config_bind);
 	return ret;
 }

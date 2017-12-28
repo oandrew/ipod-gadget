@@ -3,7 +3,7 @@
 // MODULE_PARM_DESC(fn_play, "Playback PCM device file name");
 
 #define IPOD_USB_VENDOR 0x05ac
-#define IPOD_USB_PRODUCT 0x12ab
+#define IPOD_USB_PRODUCT 0x12a8
 
 static struct usb_string strings_dev[] = {
 	[USB_GADGET_MANUFACTURER_IDX].s = "",
