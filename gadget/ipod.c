@@ -200,7 +200,7 @@ static void ipod_audio_iso_complete(struct usb_ep *ep, struct usb_request *req)
 
 	//trace_ipod_req_out_done(req);
 
-	if (req->status == -ESHUTDOWN)
+	if (req->status)
 		return;
 
 	if (ipod_audio_data.dma_area == NULL)
