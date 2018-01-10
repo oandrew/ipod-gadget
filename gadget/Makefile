@@ -2,7 +2,11 @@ KERNEL_PATH ?= /lib/modules/`uname -r`/build
 
 
 g_ipod-y := ipod.o
-obj-m += g_ipod.o
+g_ipod_hid-y := ipod_hid.o
+g_ipod_audio-y := ipod_audio.o
+g_ipod_gadget-y := ipod_gadget.o
+
+obj-m += g_ipod.o g_ipod_hid.o g_ipod_audio.o g_ipod_gadget.o
 
 ccflags-y += -DDEBUG
 ccflags-y += -DVERBOSE_DEBUG
