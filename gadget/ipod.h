@@ -37,7 +37,7 @@ static struct usb_device_descriptor device_desc = {
 	/* .iManufacturer = DYNAMIC */
 	/* .iProduct = DYNAMIC */
 	/* NO SERIAL NUMBER */
-	.bNumConfigurations =	2,
+	//.bNumConfigurations =	2,
 };
 
 //static const struct usb_descriptor_header *otg_desc[2];
@@ -135,7 +135,7 @@ static DECLARE_UAC_FORMAT_TYPE_I_DISCRETE_DESC(9) ipod_audio_stream_1_uac_discre
 static struct usb_endpoint_descriptor ipod_audio_stream_1_endpoint_fs = {
 	.bLength =		USB_DT_ENDPOINT_AUDIO_SIZE,
 	.bDescriptorType =	USB_DT_ENDPOINT  ,
-	.bEndpointAddress =  1 | USB_DIR_IN ,
+	.bEndpointAddress =  USB_DIR_IN ,
 	.bmAttributes =	USB_ENDPOINT_XFER_ISOC | USB_ENDPOINT_SYNC_NONE,
 	.wMaxPacketSize =	cpu_to_le16(192),
 	.bInterval =	1,
@@ -146,7 +146,7 @@ static struct usb_endpoint_descriptor ipod_audio_stream_1_endpoint_fs = {
 static struct usb_endpoint_descriptor ipod_audio_stream_1_endpoint_hs = {
 	.bLength =		USB_DT_ENDPOINT_AUDIO_SIZE,
 	.bDescriptorType =	USB_DT_ENDPOINT  ,
-	.bEndpointAddress =  1 | USB_DIR_IN ,
+	.bEndpointAddress =  USB_DIR_IN ,
 	.bmAttributes =	USB_ENDPOINT_XFER_ISOC | USB_ENDPOINT_SYNC_NONE,
 	.wMaxPacketSize =	cpu_to_le16(192),
 	.bInterval =	4,
@@ -230,7 +230,7 @@ static struct hid_descriptor ipod_hid_desc2 = {
 static struct usb_endpoint_descriptor ipod_hid_endpoint = {
 	.bLength =		USB_DT_ENDPOINT_SIZE,
 	.bDescriptorType =	USB_DT_ENDPOINT  ,
-	.bEndpointAddress =  3 | USB_DIR_IN ,
+	.bEndpointAddress =  USB_DIR_IN ,
 	.bmAttributes =	USB_ENDPOINT_XFER_INT,
 	.wMaxPacketSize =	cpu_to_le16(64),
 	.bInterval =	1,

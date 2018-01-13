@@ -98,7 +98,7 @@ static ssize_t ipod_hid_dev_read(struct file *file, char __user *buffer,
 	if (!count)
 		return 0;
 
-	trace_printk("len=%lu\n", count);
+	trace_printk("len=%zu\n", count);
 
 	ret = ipod_mutex_lock(&hid->lock, file->f_flags & O_NONBLOCK);
 	if(ret) {
@@ -155,8 +155,11 @@ static void ipod_hid_send_workfn(struct work_struct *work) {
 	while((len = kfifo_out(&hid->write_fifo,hid->in_req->buf, REPORT_LENGTH)) > 0) {
 		trace_printk("send len=%d\n", len);
 		//msleep(1000);
-		
+		#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,13,0)
 		reinit_completion(&hid->send_completion);
+		#else
+		INIT_COMPLETION(hid->send_completion);
+		#endif
 
 		hid->in_req->status = 0;
 		hid->in_req->zero = 0;
@@ -186,7 +189,7 @@ static ssize_t ipod_hid_dev_write(struct file *file, const char __user *buffer, 
 	int copied;
 	bool was_scheduled;
 
-	trace_printk("len=%lu\n", count);
+	trace_printk("len=%zu\n", count);
 
 	ret = ipod_mutex_lock(&hid->lock, file->f_flags & O_NONBLOCK);
 	if(ret) {
@@ -335,6 +338,10 @@ int ipod_hid_setup(struct usb_function *func, const struct usb_ctrlrequest *ctrl
 		memcpy(req->buf, ipod_hid_report, 208);
 		goto respond;
 		break;
+	case HID_REQ_GET_REPORT:
+		memset(req->buf, 0x00, w_length);
+		goto respond;
+		break;
 	case HID_REQ_SET_REPORT:
 		req->complete = ipod_hid_recv_complete;
         req->context = hid;
@@ -429,7 +436,12 @@ int ipod_hid_bind(struct usb_configuration *conf, struct usb_function *func)
 		return -ENODEV;
 	}
 
+	#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,6,0)
 	ret = usb_assign_descriptors(func, ipod_hid_desc_fs_hs, ipod_hid_desc_fs_hs, NULL, NULL);
+	#else
+	ret = usb_assign_descriptors(func, ipod_hid_desc_fs_hs, ipod_hid_desc_fs_hs, NULL);
+	#endif
+
 	if(ret) {
         return ret;
     }
@@ -464,7 +476,9 @@ void ipod_hid_unbind(struct usb_configuration *conf, struct usb_function *func)
 
 	kfree(hid->in_req->buf);
 	usb_ep_free_request(hid->in_ep, hid->in_req);
+	#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,0)
 	usb_ep_autoconfig_release(hid->in_ep);
+	#endif
 
 	hid->in_ep = NULL;
 
@@ -518,9 +532,11 @@ static struct usb_function *ipod_hid_alloc(struct usb_function_instance *fi)
     hid->func.setup = ipod_hid_setup;
     hid->func.disable = ipod_hid_disable;
     hid->func.free_func = ipod_hid_free;
+	#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,1,0)
     hid->func.req_match = ipod_hid_req_match;
+	#endif
 	hid->major = MAJOR(opts->dev);
-	hid->func.bind_deactivated = false;
+	//hid->func.bind_deactivated = false;
 
 	mutex_init(&hid->lock);
 	atomic_set(&hid->refcnt, 0);
@@ -545,7 +561,7 @@ static struct usb_function *ipod_hid_alloc(struct usb_function_instance *fi)
 	device = device_create(ipod_hid_class, NULL, 
 		dev, NULL, "iap%d", MINOR(dev));
 	if(IS_ERR(device)) {
-		return PTR_ERR(device);
+		return ERR_PTR(-EINVAL);
 	}
 	
 

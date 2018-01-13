@@ -3,6 +3,7 @@
 #include <linux/usb/composite.h>
 #include <linux/usb/audio.h>
 #include <linux/usb/ch9.h>
+#include <linux/usb/gadget.h>
 #include <linux/hid.h>
 #include "ipod.h"
 
@@ -34,7 +35,7 @@ int ipod_config_setup(struct usb_configuration *conf, const struct usb_ctrlreque
 
 static struct usb_configuration ipod_configuration = {
 	.label = "iPod interface",
-	.bConfigurationValue = 2,
+	.bConfigurationValue = 1,
 	/* .iConfiguration = DYNAMIC */
 	.bmAttributes = USB_CONFIG_ATT_SELFPOWER,
 	.MaxPower = 500,
@@ -118,7 +119,7 @@ static struct usb_composite_driver ipod_driver = {
 
 
 
-module_usb_composite_driver(ipod_driver);
+module_driver(ipod_driver, usb_composite_probe, usb_composite_unregister);
 
 MODULE_AUTHOR("Andrew Onyshchuk");
 MODULE_LICENSE("GPL");
