@@ -1,3 +1,4 @@
+#define pr_fmt(fmt) "ipod-gadget-audio: " fmt
 
 #include <linux/kernel.h>
 #include <linux/module.h>
@@ -207,7 +208,7 @@ static void ipod_audio_iso_complete(struct usb_ep *ep, struct usb_request *req)
     struct ipod_audio *audio = req->context;
 	int ret;
 
-    trace_printk("status=%d ep_enabled=%d\n", req->status, audio->in_ep_enabled);
+    //trace_printk("status=%d ep_enabled=%d\n", req->status, audio->in_ep_enabled);
 	//trace_ipod_req_out_done(req);
 
 	//if (req->status == -ESHUTDOWN)
@@ -335,6 +336,8 @@ int ipod_audio_start(struct ipod_audio* audio) {
     int i;
     struct usb_request *req;
 
+	pr_info("audio start\n");
+
 	if(audio->in_ep_enabled) {
 		return 0;
 	}
@@ -352,11 +355,12 @@ int ipod_audio_start(struct ipod_audio* audio) {
         DBG(audio->func.config->cdev, "Enable IN endpoint FAILED!\n");
         return ret;
     }
+
+	usb_ep_fifo_flush(audio->in_ep);
     
 
     
     for (i = 0; i < NUM_USB_AUDIO_TRANSFERS; i++){
-        printk("ipod_audio_start 3: %d %p\n", i, audio->in_req[i]);
         if (!audio->in_req[i]) {
             req = usb_ep_alloc_request(audio->in_ep, GFP_ATOMIC);
             if(req == NULL) {
@@ -370,7 +374,6 @@ int ipod_audio_start(struct ipod_audio* audio) {
             req->buf = audio->rbuf + i * MAX_USB_AUDIO_PACKET_SIZE;
         }
 
-        printk("ipod_audio_start 4: %d %p\n", i, audio->in_req[i]);
         if (usb_ep_queue(audio->in_ep, audio->in_req[i], GFP_ATOMIC)){
             ERROR(audio->func.config->cdev, "usb_ep_queue error on ep0\n");
         }
@@ -381,14 +384,12 @@ int ipod_audio_start(struct ipod_audio* audio) {
 
 int ipod_audio_stop(struct ipod_audio* audio) {
     int i;
-    printk("ipod_audio_stop 1\n");
+    pr_info("audio stop\n");
     if(!audio->in_ep_enabled) {
         return 0;
     }
     audio->in_ep_enabled = false;
-    printk("ipod_audio_stop 2\n");
     for (i = 0; i < NUM_USB_AUDIO_TRANSFERS; i++) {
-        printk("ipod_audio_stop 3: %d %p\n", i, audio->in_req[i]);
         if(audio->in_req[i]) {
             usb_ep_dequeue(audio->in_ep, audio->in_req[i]);
             usb_ep_free_request(audio->in_ep, audio->in_req[i]);

@@ -1,9 +1,5 @@
-// static char *fn_play = FILE_PCM_PLAYBACK;
-// module_param(fn_play, charp, S_IRUGO);
-// MODULE_PARM_DESC(fn_play, "Playback PCM device file name");
-
 #define IPOD_USB_VENDOR 0x05ac
-#define IPOD_USB_PRODUCT 0x12a8
+#define IPOD_USB_PRODUCT 0x1297
 
 static struct usb_string strings_dev[] = {
 	[USB_GADGET_MANUFACTURER_IDX].s = "",
@@ -33,14 +29,12 @@ static struct usb_device_descriptor device_desc = {
 	/* .bMaxPacketSize0 = f(hardware) */
 	.idVendor =		cpu_to_le16(IPOD_USB_VENDOR),
 	.idProduct =		cpu_to_le16(IPOD_USB_PRODUCT),
-	.bcdDevice = cpu_to_le16(0x0401),
+	.bcdDevice = cpu_to_le16(0x0310),
 	/* .iManufacturer = DYNAMIC */
 	/* .iProduct = DYNAMIC */
 	/* NO SERIAL NUMBER */
 	//.bNumConfigurations =	2,
 };
-
-//static const struct usb_descriptor_header *otg_desc[2];
 
 
 // ===== IPOD function

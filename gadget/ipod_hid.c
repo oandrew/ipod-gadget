@@ -1,3 +1,5 @@
+#define pr_fmt(fmt) "ipod-gadget-hid: " fmt
+
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/usb/composite.h>
@@ -46,17 +48,16 @@ struct ipod_hid
 	// struct device *device;
 
 	
+	wait_queue_head_t waitq;
 
 	// recv
 	STRUCT_KFIFO_REC_2(REPORT_LENGTH*4) read_fifo;
-	wait_queue_head_t read_waitq;
 	//spinlock_t read_lock;
 
 	// send
 	struct usb_request *in_req;
 
 	STRUCT_KFIFO_REC_2(REPORT_LENGTH*4) write_fifo;
-	wait_queue_head_t write_waitq;
 	struct work_struct send_work;
 	struct completion  send_completion;
 
@@ -81,10 +82,10 @@ static void ipod_hid_recv_complete(struct usb_ep *ep, struct usb_request *req)
 	trace_printk("len=%d actual=%d \n", req->length, req->actual);
 	copied = kfifo_in(&hid->read_fifo, req->buf, req->length);
 	if(unlikely(copied != req->length)) {
-		pr_err("ipod-gadget-hid: recv buffer full!\n");
+		pr_err("recv buffer full!\n");
 		return;
 	}
-	wake_up_interruptible(&hid->read_waitq);
+	wake_up_interruptible(&hid->waitq);
 }
 
 
@@ -111,7 +112,7 @@ static ssize_t ipod_hid_dev_read(struct file *file, char __user *buffer,
 			ret = -EAGAIN;
 			goto unlock;
 		}
-		ret = wait_event_interruptible(hid->read_waitq,
+		ret = wait_event_interruptible(hid->waitq,
 			!kfifo_is_empty(&hid->read_fifo));
 
 		if(ret) {
@@ -169,13 +170,13 @@ static void ipod_hid_send_workfn(struct work_struct *work) {
 
 		ret = usb_ep_queue(hid->in_ep, hid->in_req, GFP_ATOMIC);
 		if(ret) {
-			pr_err("ipod-gadget-hid: usb_ep_queue error=%d\n", ret);
+			pr_err("usb_ep_queue error=%d\n", ret);
 			continue;
 		}
 
 		wait_for_completion(&hid->send_completion);
 
-		wake_up_interruptible(&hid->write_waitq);
+		wake_up_interruptible(&hid->waitq);
 	}
 	trace_printk("done\n");
 }
@@ -201,7 +202,7 @@ static ssize_t ipod_hid_dev_write(struct file *file, const char __user *buffer, 
 			ret = -EAGAIN;
 			goto unlock;
 		}
-		ret = wait_event_interruptible(hid->write_waitq,
+		ret = wait_event_interruptible(hid->waitq,
 			kfifo_avail(&hid->write_fifo) >= count);
 		if(ret) {
 			goto unlock;
@@ -213,7 +214,7 @@ static ssize_t ipod_hid_dev_write(struct file *file, const char __user *buffer, 
 		goto unlock;
 	}
 	if(copied != count) {
-		pr_err("ipod-gadget-hid: send buffer full!\n");
+		pr_err("send buffer full!\n");
 		ret = -EFAULT;
 		goto unlock;
 	}
@@ -232,16 +233,17 @@ unlock:
 static unsigned int ipod_hid_dev_poll(struct file *file, poll_table *wait) {
     struct ipod_hid *hid = file->private_data;
 	unsigned int ret = 0;
-	pr_info("ipod-gadget-hid: ipod_hid_dev_poll()\n");
+	
 
-	poll_wait(file, &hid->read_waitq, wait);
-	poll_wait(file, &hid->write_waitq, wait);
+	poll_wait(file, &hid->waitq, wait);
 
 	if (!kfifo_is_empty(&hid->read_fifo))
 		ret |= POLLIN | POLLRDNORM;
 
 	if (kfifo_avail(&hid->write_fifo))
 		ret |= POLLOUT | POLLWRNORM;
+
+	trace_printk("read:%d write:%d\n", !!(ret & POLLIN), !!(ret & POLLOUT));
 
 	return ret;
 }
@@ -255,16 +257,16 @@ static int ipod_hid_dev_open(struct inode *inode, struct file *fd) {
 	int ret;
 	struct ipod_hid *hid = 
 		container_of(inode->i_cdev, struct ipod_hid, cdev);
-	pr_info("ipod-gadget-hid: ipod_hid_dev_open()\n");
+	pr_info("ipod_hid_dev_open()\n");
 
 	fd->private_data = hid;
 
 	if(atomic_inc_return(&hid->refcnt) == 1) {
-		pr_info("ipod-gadget-hid: activating \n");
+		pr_info("activating \n");
 		if(hid->bound) {
 			ret = usb_function_activate(&hid->func);
 			if(ret) {
-				pr_err("ipod-gadget-hid: activating err=%d \n", ret);
+				pr_err("activating err=%d \n", ret);
 				return ret;
 			}
 		}
@@ -278,15 +280,15 @@ static int ipod_hid_dev_open(struct inode *inode, struct file *fd) {
 static int ipod_hid_dev_release(struct inode *inode, struct file *fd) {
 	int ret;
 	struct ipod_hid *hid = fd->private_data;
-	pr_info("ipod-gadget-hid: ipod_hid_dev_release()\n");
+	pr_info("ipod_hid_dev_release()\n");
 
 	if(atomic_dec_and_test(&hid->refcnt))
 	{
-		pr_info("ipod-gadget-hid: deactivating=%d \n", hid->bound);
+		pr_info("deactivating=%d \n", hid->bound);
 		if(hid->bound) {
 			ret = usb_function_deactivate(&hid->func);
 			if(ret) {
-				pr_err("ipod-gadget-hid: deactivating err=%d \n", ret);
+				pr_err("deactivating err=%d \n", ret);
 			}
 		}
 		
@@ -458,7 +460,6 @@ int ipod_hid_bind(struct usb_configuration *conf, struct usb_function *func)
 	}
 	hid->bound = true;
 
-	printk("ret=%d\n", ret);
 	return ret;
 }
 
@@ -501,7 +502,7 @@ struct ipod_hid_opts {
 static void ipod_hid_free(struct usb_function *func) 
 {
     struct ipod_hid *hid = func_to_ipod_hid(func);
-	pr_info("ipod-gadget-hid: ipod_hid_free()\n");
+	pr_info("ipod_hid_free()\n");
 
 	device_destroy(ipod_hid_class, MKDEV(hid->major, 0));
 	cdev_del(&hid->cdev);
@@ -521,7 +522,7 @@ static struct usb_function *ipod_hid_alloc(struct usb_function_instance *fi)
 	struct ipod_hid *hid = kzalloc(sizeof(*hid), GFP_KERNEL);
 	if (!hid)
 		return ERR_PTR(-ENOMEM);
-	pr_info("ipod-gadget-hid: ipod_hid_alloc()\n");
+	pr_info("ipod_hid_alloc()\n");
 
 	
 
@@ -540,11 +541,11 @@ static struct usb_function *ipod_hid_alloc(struct usb_function_instance *fi)
 
 	mutex_init(&hid->lock);
 	atomic_set(&hid->refcnt, 0);
+	init_waitqueue_head(&hid->waitq);
 
 	INIT_KFIFO(hid->read_fifo);
-	init_waitqueue_head(&hid->read_waitq);
 
-	init_waitqueue_head(&hid->write_waitq);
+
 	INIT_KFIFO(hid->write_fifo);
 	INIT_WORK(&hid->send_work, ipod_hid_send_workfn);
 	init_completion(&hid->send_completion);	
@@ -555,7 +556,7 @@ static struct usb_function *ipod_hid_alloc(struct usb_function_instance *fi)
 	cdev_init(&hid->cdev, &ipod_hid_dev_ops);
 	dev = MKDEV(hid->major, 0);
 	if((ret = cdev_add(&hid->cdev, dev, 1))) {
-		printk("cdev_add err=%d\n", ret);
+		pr_err("cdev_add err=%d\n", ret);
 	}
 
 	device = device_create(ipod_hid_class, NULL, 
@@ -608,10 +609,10 @@ static struct usb_function_instance *ipod_hid_alloc_inst(void)
 		return ERR_PTR(-ENOMEM);
 
 	if((err = alloc_chrdev_region(&opts->dev, 0, 1, "iap"))) {
-		printk("alloc_chrdev_region err=%d\n", err);
+		pr_err("alloc_chrdev_region err=%d\n", err);
 	}
 
-	printk("alloc_chrdev_region dev: %d %d\n", 
+	pr_info("alloc_chrdev_region dev: %d %d\n", 
 		MAJOR(opts->dev), MINOR(opts->dev));
 	
 

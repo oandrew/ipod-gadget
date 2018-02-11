@@ -1,3 +1,5 @@
+#define pr_fmt(fmt) "ipod-gadget: " fmt
+
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/usb/composite.h>
@@ -6,6 +8,60 @@
 #include <linux/usb/gadget.h>
 #include <linux/hid.h>
 #include "ipod.h"
+
+
+
+static bool swap_configs = false;
+module_param(swap_configs, bool, 0);
+MODULE_PARM_DESC(swap_configs, "Present iPod USB config as #1");
+
+static ushort product_id = 0;
+module_param(product_id, ushort, 0);
+MODULE_PARM_DESC(product_id, "Override USB Product ID");
+
+static struct usb_function_instance *fi_ms;
+static struct usb_function *f_ms;
+
+int ipod_config_ptp_bind(struct usb_configuration *conf)
+{
+	int err;
+	DBG(conf->cdev, " = %s() \n", __FUNCTION__);
+
+	f_ms = usb_get_function(fi_ms);
+	if(IS_ERR(f_ms)) {
+		return PTR_ERR(f_ms);
+	}
+	err = usb_add_function(conf, f_ms);
+	if(err < 0) {
+		usb_put_function(f_ms);
+		return err;
+	}
+
+	return 0;
+}
+
+void ipod_config_ptp_unbind(struct usb_configuration *conf)
+{
+	DBG(conf->cdev, " = %s() \n", __FUNCTION__);
+	if (!IS_ERR_OR_NULL(f_ms)) {
+		usb_put_function(f_ms);
+	}
+}
+int ipod_config_ptp_setup(struct usb_configuration *conf, const struct usb_ctrlrequest *ctrl)
+{
+	DBG(conf->cdev, " = %s() \n", __FUNCTION__);
+	return 0;
+}
+
+static struct usb_configuration ipod_fake_ptp = {
+	.label = "PTP",
+	.bConfigurationValue = 1,
+	/* .iConfiguration = DYNAMIC */
+	.bmAttributes = USB_CONFIG_ATT_SELFPOWER,
+	.MaxPower = 500,
+	.unbind = ipod_config_ptp_unbind,
+	.setup = ipod_config_ptp_setup,
+};
 
 // usb config
 static struct usb_function_instance *ipod_hid_fi;
@@ -35,7 +91,7 @@ int ipod_config_setup(struct usb_configuration *conf, const struct usb_ctrlreque
 
 static struct usb_configuration ipod_configuration = {
 	.label = "iPod interface",
-	.bConfigurationValue = 1,
+	.bConfigurationValue = 2,
 	/* .iConfiguration = DYNAMIC */
 	.bmAttributes = USB_CONFIG_ATT_SELFPOWER,
 	.MaxPower = 500,
@@ -49,6 +105,14 @@ static int ipod_bind(struct usb_composite_dev *cdev)
 {
 	int ret = 0;
 	DBG(cdev, " = %s() \n", __FUNCTION__);
+
+	fi_ms = usb_get_function_instance("mass_storage");
+	if(IS_ERR(fi_ms)) {
+		return PTR_ERR(fi_ms);
+	}
+
+	usb_add_config(cdev, &ipod_fake_ptp, ipod_config_ptp_bind);
+
 
 	ipod_audio_fi = usb_get_function_instance("ipod_audio");
     if(IS_ERR(ipod_audio_fi)) {
@@ -78,6 +142,9 @@ static int ipod_bind(struct usb_composite_dev *cdev)
 static int ipod_unbind(struct usb_composite_dev *cdev)
 {
 	DBG(cdev, " = %s() \n", __FUNCTION__);
+
+	usb_put_function_instance(fi_ms);
+
 
 	usb_put_function(ipod_audio_f);
 	usb_put_function_instance(ipod_audio_fi);
@@ -119,7 +186,33 @@ static struct usb_composite_driver ipod_driver = {
 
 
 
-module_driver(ipod_driver, usb_composite_probe, usb_composite_unregister);
+static int __init ipod_init(void)
+{
+	pr_info("init\n");
+
+	if(swap_configs) {
+		ipod_configuration.bConfigurationValue = 1;
+		ipod_fake_ptp.bConfigurationValue = 2;
+		pr_info("swapping usb configuration: ipod is #1\n");
+	}
+
+	if(product_id != 0) {
+		device_desc.idProduct = cpu_to_le16(product_id);
+		pr_info("override usb idProduct: %04x\n", product_id);
+	}
+
+	return usb_composite_probe(&ipod_driver);
+	
+}
+
+static void __exit ipod_exit(void)
+{
+	pr_info("exit\n");
+	usb_composite_unregister(&ipod_driver);
+}
+
+module_init(ipod_init);
+module_exit(ipod_exit);
 
 MODULE_AUTHOR("Andrew Onyshchuk");
 MODULE_LICENSE("GPL");
