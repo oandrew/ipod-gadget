@@ -1,16 +1,6 @@
 # ipod-gadget
 [![Join the chat at https://gitter.im/ipod-gadget/Lobby](https://badges.gitter.im/ipod-gadget/Lobby.svg)](https://gitter.im/ipod-gadget/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-## update
-New library and app are now at https://github.com/oandrew/ipod !
-
-Totally rewritten from scratch and with new features that should help with debugging/troubleshooting.
-
-Join gitter chat for any questions.
-
----
-
-iPod usb audio gadget
 
 ipod-gadget simulates an iPod USB device to stream digital audio to iPod compatible devices/docks.
 It speaks iAP(iPod Accessory Protocol) and starts an audio streaming session.
@@ -20,7 +10,7 @@ Should work on any device that runs Linux 4.x (compiled with usb gadget configfs
 
 
 # implementation
-It consists of two parts - linux kernel module and  client app (Golang).
+It consists of two parts - linux kernel module and  client app (golang).
 ## kernel module
  
 The kernel module takes care of the USB device gadget side. 
@@ -40,36 +30,40 @@ It handles the authentication and activates the audio streaming so that ALSA dev
 # build and run
 
 
+## kernel modules
+
 ```
 git clone https://github.com/oandrew/ipod-gadget.git
-cd ipod-gadget
-```
+cd ipod-gadget/gadget
 
-kernel module (linux kernel need to be compiled with usb gadget configfs support)
-```
-cd gadget
 make
-# or cross compiling with  custom linux kernel source path
+# or cross compiling
 make ARCH=arm CROSS_COMPILE=arm-linux-gnueabi- KERNEL_PATH=/home/andrew/pi-linux 
 
 #load the module
 modprobe libcomposite
-insmod g_ipod.ko
+insmod g_ipod_audio.ko
+insmod g_ipod_hid.ko
+insmod g_ipod_gadget.ko [swap_configs=0] [product_id=0x1297]
+
+#optional params
+swap_config: swap USB configurations. 
+Might be useful when the dock sees only the Mass Storage configuation.
+
+product_id: override the usb product id.
+See doc/apple-usb.ids for the list of ids
+
 ```
 
-client (golang)
-```
-cd cmd/ipod
-go get -d
+Check the messages from `dmesg` and verify that the device `/dev/iap0` is available.
 
-go build
-# or cross compiling
-GOARCH=arm GOARM=6 go build
+## client app
 
-./ipod
+Follow the instructions here: https://github.com/oandrew/ipod
+
 ```
-After launching `./ipod` plug in the device and verify it has been enumerated by the host.
-You will see all the received/send messages on the output.
+./ipod -d serve -w /tmp/ipod.trace /dev/iap0
+```
 
 Now you can open a different terminal and test the playback!
 
@@ -78,6 +72,8 @@ speaker-test -D plughw:CARD=iPodUSB,DEV=0 -c 2 -r 44100
 ```
 
 Let me know if you have any issues.
+
+Attach the trace file (e.g. `/tmp/ipod.trace` above) to the issue.
 
 NOTE: currently it works only if the host device doesn't authenticate the iPod (typically only iPod authenticates the host device which is fine).
 
