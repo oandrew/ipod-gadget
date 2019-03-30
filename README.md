@@ -36,12 +36,9 @@ On the Raspberry PI:
 sudo apt update && sudo apt upgrade
 sudo apt install dkms raspberrypi-kernel-headers
 
-git clone https://github.com/oandrew/ipod-gadget.git
-sudo ln -s /home/pi/ipod-gadget/gadget /usr/src/ipod-gadget-0.1
-sudo dkms add -m ipod-gadget/0.1
-sudo dkms build -m ipod-gadget/0.1
-sudo dkms install -m ipod-gadget/0.1
-sudo cp ipod-modules.conf /etc/modules-load.d/
+sudo git clone https://github.com/oandrew/ipod-gadget.git /usr/src/ipod-gadget-0.1
+cd /usr/src/ipod-gadget-0.1
+sudo make dkms
 ```
 
 Now everytime the kernel gets updated the kernel modules will be automatically rebuilt.
