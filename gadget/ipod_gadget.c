@@ -15,6 +15,10 @@ static bool only_ipod = false;
 module_param(only_ipod, bool, 0);
 MODULE_PARM_DESC(only_ipod, "Only ipod config");
 
+static bool disable_audio = false;
+module_param(disable_audio, bool, 0);
+MODULE_PARM_DESC(disable_audio, "No audio intf");
+
 static bool swap_configs = false;
 module_param(swap_configs, bool, 0);
 MODULE_PARM_DESC(swap_configs, "Present iPod USB config as #1");
@@ -78,7 +82,9 @@ int ipod_config_bind(struct usb_configuration *conf)
 {
 	
 	DBG(conf->cdev, " = %s() \n", __FUNCTION__);
-	usb_add_function(conf, ipod_audio_f);
+	if (!disable_audio) {
+		usb_add_function(conf, ipod_audio_f);
+	}
 	usb_add_function(conf, ipod_hid_f);
 	return 0;
 }
@@ -115,9 +121,9 @@ static int ipod_bind(struct usb_composite_dev *cdev)
 		return PTR_ERR(fi_ms);
 	}
 
-  if(!only_ipod) {
-	usb_add_config(cdev, &ipod_fake_ptp, ipod_config_ptp_bind);
-  }
+	if(!only_ipod) {
+		usb_add_config(cdev, &ipod_fake_ptp, ipod_config_ptp_bind);
+	}
 
 
 	ipod_audio_fi = usb_get_function_instance("ipod_audio");
