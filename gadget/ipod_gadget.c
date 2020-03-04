@@ -11,6 +11,10 @@
 
 
 
+static bool only_ipod = false;
+module_param(only_ipod, bool, 0);
+MODULE_PARM_DESC(only_ipod, "Only ipod config");
+
 static bool swap_configs = false;
 module_param(swap_configs, bool, 0);
 MODULE_PARM_DESC(swap_configs, "Present iPod USB config as #1");
@@ -111,7 +115,9 @@ static int ipod_bind(struct usb_composite_dev *cdev)
 		return PTR_ERR(fi_ms);
 	}
 
+  if(!only_ipod) {
 	usb_add_config(cdev, &ipod_fake_ptp, ipod_config_ptp_bind);
+  }
 
 
 	ipod_audio_fi = usb_get_function_instance("ipod_audio");
