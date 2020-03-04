@@ -337,7 +337,7 @@ int ipod_hid_setup(struct usb_function *func, const struct usb_ctrlrequest *ctrl
 	{
 	case USB_REQ_GET_DESCRIPTOR:
 		VDBG(cdev, "get hid descriptor\n");
-		memcpy(req->buf, ipod_hid_report, 208);
+		memcpy(req->buf, ipod_hid_report, sizeof(ipod_hid_report));
 		goto respond;
 		break;
 	case HID_REQ_GET_REPORT:
