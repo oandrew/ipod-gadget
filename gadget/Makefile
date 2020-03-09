@@ -17,8 +17,8 @@ ccflags-y += -Wno-unused-variable -Wno-unused-function
 ccflags-y += -I$(src)
 
 all:
-	make -C $(KERNEL_PATH) M=$(PWD) modules
+	make -C $(KERNEL_PATH) M=$(CURDIR) modules
 
 clean:
-	make -C $(KERNEL_PATH) M=$(PWD) clean
+	make -C $(KERNEL_PATH) M=$(CURDIR) clean
 
