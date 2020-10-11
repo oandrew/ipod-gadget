@@ -10,7 +10,9 @@ Should work on any device that runs Linux 4.x (compiled with usb gadget configfs
 
 
 # implementation
+
 It consists of two parts - linux kernel module and  client app (golang).
+
 ## kernel module
  
 The kernel module takes care of the USB device gadget side. 
@@ -29,8 +31,15 @@ It handles the authentication and activates the audio streaming so that ALSA dev
 
 # build and run
 
-
 ## kernel modules
+
+### linux config dependencies
+
+Linux kernel must be compiled with following config:
+
+* `CONFIG_TRIM_UNUSED_KSYMS=n`
+
+### instructions
 
 ```
 git clone https://github.com/oandrew/ipod-gadget.git
@@ -47,7 +56,7 @@ insmod g_ipod_hid.ko
 insmod g_ipod_gadget.ko [swap_configs=0] [product_id=0x1297]
 
 #optional params
-swap_config: swap USB configurations. 
+swap_configs: swap USB configurations. 
 Might be useful when the dock sees only the Mass Storage configuation.
 
 product_id: override the usb product id.
