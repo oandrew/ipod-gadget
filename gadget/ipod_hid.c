@@ -629,10 +629,19 @@ DECLARE_USB_FUNCTION(ipod_hid, ipod_hid_alloc_inst, ipod_hid_alloc);
 
 static int __init ipod_hid_mod_init(void)
 {
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6,1,0)
 	ipod_hid_class = class_create(THIS_MODULE, "iap");
 	if(IS_ERR(ipod_hid_class)) {
 		return PTR_ERR(ipod_hid_class);
-	}
+	}	
+#else
+	ipod_hid_class = class_create("iap");
+	if(IS_ERR(ipod_hid_class)) {
+		return PTR_ERR(ipod_hid_class);
+	}	
+#endif
+
+
 
 
 	return usb_function_register(&ipod_hidusb_func);
