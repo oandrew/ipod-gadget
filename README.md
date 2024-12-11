@@ -33,6 +33,9 @@ It handles the authentication and activates the audio streaming so that ALSA dev
 ## kernel modules
 
 ```
+# Install DKMS to allow for nice easy kernel module installation and updating.
+
+sudo apt install dkms 
 git clone https://github.com/dangerzau/ipod-gadget.git
 cd ipod-gadget/gadget
 
