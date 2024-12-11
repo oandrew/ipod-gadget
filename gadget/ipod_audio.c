@@ -554,7 +554,7 @@ int ipod_audio_bind(struct usb_configuration *conf, struct usb_function *func)
 	snd_pcm_set_ops(audio->pcm, SNDRV_PCM_STREAM_PLAYBACK, &ipod_audio_pcm_ops);
 	
 	
-	#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 1, 0))
+	#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 1, 0))
 		snd_pcm_lib_preallocate_pages_for_all(audio->pcm,
 			SNDRV_DMA_TYPE_CONTINUOUS,
 			snd_dma_continuous_data(GFP_KERNEL,)
