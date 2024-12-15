@@ -38,6 +38,14 @@ It handles the authentication and activates the audio streaming so that ALSA dev
 sudo apt install dkms 
 git clone https://github.com/dangerzau/ipod-gadget.git
 cd ipod-gadget/gadget
+ln -s ../gadget /usr/src/ipod-gadget/0.1
+sudo dkms add -m ipod-gadget/0.1
+sudo dkms install ipod-gadget/0.1
+
+
+
+
+
 
 make
 # or cross compiling
