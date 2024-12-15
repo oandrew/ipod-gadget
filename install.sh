@@ -15,12 +15,12 @@ sudo apt install git bc bison flex libssl-dev make -y
 echo "Installing DKMS to allow for simpler kernel module install/upgrading..."
 echo ""
 sudo apt install --no-install-recommends dkms
-# Next we clone/pull down the git repo we want to compile
-#echo "Cloning repo..."
-#echo ""
-#git clone https://github.com/dangerzau/ipod-gadget.git
 # Switch into the downloaded directory and setup a softlink for DKMS
 echo "Setting up DKMS local repo..."
+echo ""
+echo "Removing existing symbolic link if exists..."
+sudo rm -r -f /usr/src/ipod-gadget-0.1
+echo "Creating symbolic link..."
 echo ""
 sudo ln -s $PWD/gadget/ /usr/src/ipod-gadget-0.1
 echo "Installing ipod-gadget into DKMS tree..."
