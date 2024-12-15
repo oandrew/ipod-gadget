@@ -23,6 +23,8 @@ sudo rm -r -f /usr/src/ipod-gadget-0.1
 echo "Creating symbolic link..."
 echo ""
 sudo ln -s $PWD/gadget/ /usr/src/ipod-gadget-0.1
+echo "Reove existing DKMS ipod-gadget tree if exists..."
+sudo dkms remove ipod-gadget/0.1
 echo "Installing ipod-gadget into DKMS tree..."
 echo ""
 sudo dkms add -m ipod-gadget/0.1
