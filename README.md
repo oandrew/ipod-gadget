@@ -33,8 +33,19 @@ It handles the authentication and activates the audio streaming so that ALSA dev
 ## kernel modules
 
 ```
-git clone https://github.com/oandrew/ipod-gadget.git
+# Install DKMS to allow for nice easy kernel module installation and updating.
+
+sudo apt install dkms 
+git clone https://github.com/dangerzau/ipod-gadget.git
 cd ipod-gadget/gadget
+ln -s ../gadget /usr/src/ipod-gadget/0.1
+sudo dkms add -m ipod-gadget/0.1
+sudo dkms install ipod-gadget/0.1
+
+
+
+
+
 
 make
 # or cross compiling
@@ -47,10 +58,10 @@ insmod g_ipod_hid.ko
 insmod g_ipod_gadget.ko [swap_configs=0] [product_id=0x1297]
 
 #optional params
-swap_config: swap USB configurations. 
+swap_config=1   - **swap USB configurations**. 
 Might be useful when the dock sees only the Mass Storage configuation.
 
-product_id: override the usb product id.
+product_id=USBIDGOESHERE    - **override the usb product id**.
 See doc/apple-usb.ids for the list of ids
 
 ```
