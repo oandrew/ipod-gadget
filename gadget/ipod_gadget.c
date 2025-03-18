@@ -127,9 +127,9 @@ static int ipod_bind(struct usb_composite_dev *cdev)
 
 
 	ipod_audio_fi = usb_get_function_instance("ipod_audio");
-    if(IS_ERR(ipod_audio_fi)) {
-        return PTR_ERR(ipod_audio_fi);
-    }
+	if(IS_ERR(ipod_audio_fi)) {
+		return PTR_ERR(ipod_audio_fi);
+	}
 
 	ipod_audio_f = usb_get_function(ipod_audio_fi);
 	if(IS_ERR(ipod_audio_f)) {
@@ -138,9 +138,9 @@ static int ipod_bind(struct usb_composite_dev *cdev)
 
 
 	ipod_hid_fi = usb_get_function_instance("ipod_hid");
-    if(IS_ERR(ipod_hid_fi)) {
-        return PTR_ERR(ipod_hid_fi);
-    }
+	if(IS_ERR(ipod_hid_fi)) {
+		return PTR_ERR(ipod_hid_fi);
+	}
 
 	ipod_hid_f = usb_get_function(ipod_hid_fi);
 	if(IS_ERR(ipod_hid_f)) {

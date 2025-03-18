@@ -77,7 +77,7 @@ static int ipod_mutex_lock(struct mutex *mutex, unsigned nonblock)
 
 static void ipod_hid_recv_complete(struct usb_ep *ep, struct usb_request *req)
 {
-    struct ipod_hid *hid = req->context;
+	struct ipod_hid *hid = req->context;
 	int copied;
 	trace_printk("len=%d actual=%d \n", req->length, req->actual);
 	copied = kfifo_in(&hid->read_fifo, req->buf, req->length);
@@ -89,10 +89,9 @@ static void ipod_hid_recv_complete(struct usb_ep *ep, struct usb_request *req)
 }
 
 
-static ssize_t ipod_hid_dev_read(struct file *file, char __user *buffer,
-								 size_t count, loff_t *ptr)
+static ssize_t ipod_hid_dev_read(struct file *file, char __user *buffer,size_t count, loff_t *ptr)
 {
-    struct ipod_hid *hid = file->private_data;
+	struct ipod_hid *hid = file->private_data;
 	int ret = -EINVAL;
 	int n, copied;
 
@@ -145,7 +144,7 @@ unlock:
 static void ipod_hid_send_complete(struct usb_ep *ep, struct usb_request *req)
 {
 	struct ipod_hid *hid = req->context;
-    complete(&hid->send_completion);
+	complete(&hid->send_completion);
 }
 
 static void ipod_hid_send_workfn(struct work_struct *work) {
@@ -186,7 +185,7 @@ static void ipod_hid_send_workfn(struct work_struct *work) {
 static ssize_t ipod_hid_dev_write(struct file *file, const char __user *buffer, size_t count, loff_t *offp)
 {
 	struct ipod_hid *hid = file->private_data;
-    int ret;
+	int ret;
 	int copied;
 	bool was_scheduled;
 
@@ -231,7 +230,7 @@ unlock:
 }
 
 static unsigned int ipod_hid_dev_poll(struct file *file, poll_table *wait) {
-    struct ipod_hid *hid = file->private_data;
+	struct ipod_hid *hid = file->private_data;
 	unsigned int ret = 0;
 	
 
@@ -308,16 +307,16 @@ static const struct file_operations ipod_hid_dev_ops = {
 
 // usb
 static bool ipod_hid_req_match(struct usb_function *func,const struct usb_ctrlrequest *ctrl,bool config0) {
-    switch(ctrl->bRequest) {
-    case 0x40:
-    	return true;
-  	}
-    return false;
+	switch(ctrl->bRequest) {
+	case 0x40:
+		return true;
+	}
+	return false;
 }
 
 int ipod_hid_setup(struct usb_function *func, const struct usb_ctrlrequest *ctrl)
 {
-    struct ipod_hid *hid = func_to_ipod_hid(func);
+	struct ipod_hid *hid = func_to_ipod_hid(func);
 	struct usb_composite_dev *cdev = func->config->cdev;
 	struct usb_request *req = cdev->req;
 
@@ -346,7 +345,7 @@ int ipod_hid_setup(struct usb_function *func, const struct usb_ctrlrequest *ctrl
 		break;
 	case HID_REQ_SET_REPORT:
 		req->complete = ipod_hid_recv_complete;
-        req->context = hid;
+		req->context = hid;
 		goto respond;
 		break;
 	case HID_REQ_SET_IDLE:
@@ -376,11 +375,11 @@ respond:
 
 int ipod_hid_set_alt(struct usb_function *func, unsigned intf, unsigned alt)
 {
-    struct ipod_hid *hid = func_to_ipod_hid(func);
+	struct ipod_hid *hid = func_to_ipod_hid(func);
 	int ret = 0;
 
 	DBG(func->config->cdev, " = %s() \n", __FUNCTION__);
-    if (intf == hid->intf) {
+	if (intf == hid->intf) {
 		if (alt > 0) {
 			ERROR(func->config->cdev, "%s:%d Error!\n", __func__, __LINE__);
 			return -EINVAL;
@@ -413,7 +412,7 @@ int ipod_hid_set_alt(struct usb_function *func, unsigned intf, unsigned alt)
 
 void ipod_hid_disable(struct usb_function *func)
 {
-    struct ipod_hid *hid = func_to_ipod_hid(func);
+	struct ipod_hid *hid = func_to_ipod_hid(func);
 	DBG(func->config->cdev, " = %s() \n", __FUNCTION__);
 
 	usb_ep_disable(hid->in_ep);
@@ -421,7 +420,7 @@ void ipod_hid_disable(struct usb_function *func)
 
 int ipod_hid_bind(struct usb_configuration *conf, struct usb_function *func)
 {
-    struct ipod_hid *hid = func_to_ipod_hid(func);
+	struct ipod_hid *hid = func_to_ipod_hid(func);
 	int ret = 0;
 
 	usb_function_deactivate(func);
@@ -445,8 +444,8 @@ int ipod_hid_bind(struct usb_configuration *conf, struct usb_function *func)
 	#endif
 
 	if(ret) {
-        return ret;
-    }
+		return ret;
+	}
 
 	hid->in_req = usb_ep_alloc_request(hid->in_ep, GFP_KERNEL);
 	hid->in_req->buf = kmalloc(REPORT_LENGTH, GFP_KERNEL);
@@ -465,7 +464,7 @@ int ipod_hid_bind(struct usb_configuration *conf, struct usb_function *func)
 
 void ipod_hid_unbind(struct usb_configuration *conf, struct usb_function *func)
 {
-    struct ipod_hid *hid = func_to_ipod_hid(func);
+	struct ipod_hid *hid = func_to_ipod_hid(func);
 	DBG(conf->cdev, " = %s(), deactivs=%d\n", __FUNCTION__, conf->cdev->deactivations);
 	hid->bound = false;
 
@@ -501,13 +500,13 @@ struct ipod_hid_opts {
 
 static void ipod_hid_free(struct usb_function *func) 
 {
-    struct ipod_hid *hid = func_to_ipod_hid(func);
+	struct ipod_hid *hid = func_to_ipod_hid(func);
 	pr_info("ipod_hid_free()\n");
 
 	device_destroy(ipod_hid_class, MKDEV(hid->major, 0));
 	cdev_del(&hid->cdev);
 
-    kfree(hid);
+	kfree(hid);
 }
 
 static struct usb_function *ipod_hid_alloc(struct usb_function_instance *fi)
@@ -526,15 +525,15 @@ static struct usb_function *ipod_hid_alloc(struct usb_function_instance *fi)
 
 	
 
-    hid->func.name = "ipod_hid";
-    hid->func.bind = ipod_hid_bind;
-    hid->func.unbind = ipod_hid_unbind;
-    hid->func.set_alt = ipod_hid_set_alt;
-    hid->func.setup = ipod_hid_setup;
-    hid->func.disable = ipod_hid_disable;
-    hid->func.free_func = ipod_hid_free;
+	hid->func.name = "ipod_hid";
+	hid->func.bind = ipod_hid_bind;
+	hid->func.unbind = ipod_hid_unbind;
+	hid->func.set_alt = ipod_hid_set_alt;
+	hid->func.setup = ipod_hid_setup;
+	hid->func.disable = ipod_hid_disable;
+	hid->func.free_func = ipod_hid_free;
 	#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,1,0)
-    hid->func.req_match = ipod_hid_req_match;
+	hid->func.req_match = ipod_hid_req_match;
 	#endif
 	hid->major = MAJOR(opts->dev);
 	//hid->func.bind_deactivated = false;
@@ -588,7 +587,7 @@ static struct configfs_item_operations ipod_item_ops = {
 
 static struct config_item_type ipod_hid_func_type = {
 	.ct_owner	 = THIS_MODULE,
-    .ct_item_ops = &ipod_item_ops,
+	.ct_item_ops = &ipod_item_ops,
 };
 
 static void ipod_hid_free_inst(struct usb_function_instance *fi)

@@ -35,9 +35,9 @@
 #include "ipod.h"
 
 struct ipod_audio {
-    struct usb_function func;
-    int ac_intf, ac_alt;
-    int as_intf, as_alt;
+	struct usb_function func;
+	int ac_intf, ac_alt;
+	int as_intf, as_alt;
 	
 
 	struct platform_device *pdev;
@@ -56,7 +56,7 @@ struct ipod_audio {
 	spinlock_t play_lock;
 
 	struct usb_ep *in_ep;
-    bool in_ep_enabled;
+	bool in_ep_enabled;
 	struct usb_request **in_req;
 
 	int cnt;
@@ -86,7 +86,7 @@ static struct snd_pcm_hardware ipod_audio_hw = {
 
 static int ipod_audio_pcm_open(struct snd_pcm_substream *substream)
 {
-    struct ipod_audio *audio = snd_pcm_substream_chip(substream);
+	struct ipod_audio *audio = snd_pcm_substream_chip(substream);
 	struct snd_pcm_runtime *runtime = substream->runtime;
 
 	runtime->hw = ipod_audio_hw;
@@ -104,20 +104,19 @@ static int ipod_audio_pcm_open(struct snd_pcm_substream *substream)
 
 static int ipod_audio_pcm_close(struct snd_pcm_substream *substream)
 {
-    struct ipod_audio *audio = snd_pcm_substream_chip(substream);
+	struct ipod_audio *audio = snd_pcm_substream_chip(substream);
 	return 0;
 }
 
 static int ipod_audio_pcm_hw_params(struct snd_pcm_substream *substream,
 									struct snd_pcm_hw_params *hw_params)
 {
-    struct ipod_audio *audio = snd_pcm_substream_chip(substream);
+	struct ipod_audio *audio = snd_pcm_substream_chip(substream);
 	int err = 0;
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
 	{
-		err = snd_pcm_lib_malloc_pages(substream,
-									   params_buffer_bytes(hw_params));
+		err = snd_pcm_lib_malloc_pages(substream, params_buffer_bytes(hw_params));
 		if (err >= 0)
 		{
 			audio->dma_bytes = substream->runtime->dma_bytes;
@@ -130,7 +129,7 @@ static int ipod_audio_pcm_hw_params(struct snd_pcm_substream *substream,
 
 static int ipod_audio_pcm_hw_free(struct snd_pcm_substream *substream)
 {
-    struct ipod_audio *audio = snd_pcm_substream_chip(substream);
+	struct ipod_audio *audio = snd_pcm_substream_chip(substream);
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
 	{
 		audio->dma_bytes = 0;
@@ -143,7 +142,7 @@ static int ipod_audio_pcm_hw_free(struct snd_pcm_substream *substream)
 
 static int ipod_audio_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
 {
-    struct ipod_audio *audio = snd_pcm_substream_chip(substream);
+	struct ipod_audio *audio = snd_pcm_substream_chip(substream);
 	unsigned long flags;
 	int err = 0;
 
@@ -177,13 +176,13 @@ static int ipod_audio_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
 
 static snd_pcm_uframes_t ipod_audio_pcm_hw_pointer(struct snd_pcm_substream *substream)
 {
-    struct ipod_audio *audio = snd_pcm_substream_chip(substream);
+	struct ipod_audio *audio = snd_pcm_substream_chip(substream);
 	return bytes_to_frames(substream->runtime, audio->hw_ptr);
 }
 
 static int ipod_audio_pcm_null(struct snd_pcm_substream *substream)
 {
-    struct ipod_audio *audio = snd_pcm_substream_chip(substream);
+	struct ipod_audio *audio = snd_pcm_substream_chip(substream);
 	return 0;
 }
 
@@ -205,10 +204,10 @@ static void ipod_audio_iso_complete(struct usb_ep *ep, struct usb_request *req)
 	unsigned int hw_ptr;
 	bool update_alsa = false;
 	struct snd_pcm_substream *substream;
-    struct ipod_audio *audio = req->context;
+	struct ipod_audio *audio = req->context;
 	int ret;
 
-    //trace_printk("status=%d ep_enabled=%d\n", req->status, audio->in_ep_enabled);
+	//trace_printk("status=%d ep_enabled=%d\n", req->status, audio->in_ep_enabled);
 	//trace_ipod_req_out_done(req);
 
 	//if (req->status == -ESHUTDOWN)
@@ -261,8 +260,7 @@ static void ipod_audio_iso_complete(struct usb_ep *ep, struct usb_request *req)
 		{
 			//printk("Oops: %d / %d \n", pending, req->actual);
 			memcpy(req->buf, audio->dma_area + hw_ptr, pending);
-			memcpy(req->buf + pending, audio->dma_area,
-				   req->actual - pending);
+			memcpy(req->buf + pending, audio->dma_area, req->actual - pending);
 		}
 		else
 		{
@@ -332,9 +330,9 @@ int ipod_audio_setup(struct usb_function *func, const struct usb_ctrlrequest *ct
 }
 
 int ipod_audio_start(struct ipod_audio* audio) {
-    int ret = 0;
-    int i;
-    struct usb_request *req;
+	int ret = 0;
+	int i;
+	struct usb_request *req;
 
 	pr_info("audio start\n");
 
@@ -342,72 +340,72 @@ int ipod_audio_start(struct ipod_audio* audio) {
 		return 0;
 	}
 	audio->in_ep_enabled = true;
-    ret = config_ep_by_speed(audio->func.config->cdev->gadget, &audio->func, audio->in_ep);
-    if (ret)
-    {
-        DBG(audio->func.config->cdev, "config_ep_by_speed FAILED!\n");
-        return ret;
-    }
+	ret = config_ep_by_speed(audio->func.config->cdev->gadget, &audio->func, audio->in_ep);
+	if (ret)
+	{
+		DBG(audio->func.config->cdev, "config_ep_by_speed FAILED!\n");
+		return ret;
+	}
 	
-    ret = usb_ep_enable(audio->in_ep);
-    if (ret < 0)
-    {
-        DBG(audio->func.config->cdev, "Enable IN endpoint FAILED!\n");
-        return ret;
-    }
+	ret = usb_ep_enable(audio->in_ep);
+	if (ret < 0)
+	{
+		DBG(audio->func.config->cdev, "Enable IN endpoint FAILED!\n");
+		return ret;
+	}
 
 	usb_ep_fifo_flush(audio->in_ep);
-    
+	
 
-    
-    for (i = 0; i < NUM_USB_AUDIO_TRANSFERS; i++){
-        if (!audio->in_req[i]) {
-            req = usb_ep_alloc_request(audio->in_ep, GFP_ATOMIC);
-            if(req == NULL) {
-                return -ENOMEM;
-            }
-            audio->in_req[i] = req;
-            req->zero = 0;
-            req->context = audio;
-            req->length = MAX_USB_AUDIO_PACKET_SIZE;
-            req->complete = ipod_audio_iso_complete;
-            req->buf = audio->rbuf + i * MAX_USB_AUDIO_PACKET_SIZE;
-        }
+	
+	for (i = 0; i < NUM_USB_AUDIO_TRANSFERS; i++){
+		if (!audio->in_req[i]) {
+			req = usb_ep_alloc_request(audio->in_ep, GFP_ATOMIC);
+			if(req == NULL) {
+				return -ENOMEM;
+			}
+			audio->in_req[i] = req;
+			req->zero = 0;
+			req->context = audio;
+			req->length = MAX_USB_AUDIO_PACKET_SIZE;
+			req->complete = ipod_audio_iso_complete;
+			req->buf = audio->rbuf + i * MAX_USB_AUDIO_PACKET_SIZE;
+		}
 
-        if (usb_ep_queue(audio->in_ep, audio->in_req[i], GFP_ATOMIC)){
-            ERROR(audio->func.config->cdev, "usb_ep_queue error on ep0\n");
-        }
-    }
-    
-    return 0;
+		if (usb_ep_queue(audio->in_ep, audio->in_req[i], GFP_ATOMIC)){
+			ERROR(audio->func.config->cdev, "usb_ep_queue error on ep0\n");
+		}
+	}
+	
+	return 0;
 }
 
 int ipod_audio_stop(struct ipod_audio* audio) {
-    int i;
-    pr_info("audio stop\n");
-    if(!audio->in_ep_enabled) {
-        return 0;
-    }
-    audio->in_ep_enabled = false;
-    for (i = 0; i < NUM_USB_AUDIO_TRANSFERS; i++) {
-        if(audio->in_req[i]) {
-            usb_ep_dequeue(audio->in_ep, audio->in_req[i]);
-            usb_ep_free_request(audio->in_ep, audio->in_req[i]);
-            audio->in_req[i] = NULL;
-        }
-    }
+	int i;
+	pr_info("audio stop\n");
+	if(!audio->in_ep_enabled) {
+		return 0;
+	}
+	audio->in_ep_enabled = false;
+	for (i = 0; i < NUM_USB_AUDIO_TRANSFERS; i++) {
+		if(audio->in_req[i]) {
+			usb_ep_dequeue(audio->in_ep, audio->in_req[i]);
+			usb_ep_free_request(audio->in_ep, audio->in_req[i]);
+			audio->in_req[i] = NULL;
+		}
+	}
 				
 	usb_ep_disable(audio->in_ep);
 
-    return 0;
+	return 0;
 }
 
 int ipod_audio_set_alt(struct usb_function *func, unsigned intf, unsigned alt)
 {
-    struct ipod_audio *audio = func_to_ipod_audio(func);
+	struct ipod_audio *audio = func_to_ipod_audio(func);
 	DBG(func->config->cdev, " = %s(%u,%u) \n", __FUNCTION__, intf, alt);
 
-    if (intf == audio->ac_intf) {
+	if (intf == audio->ac_intf) {
 		if (alt > 0) {
 			ERROR(func->config->cdev, "%s:%d Error!\n", __func__, __LINE__);
 			return -EINVAL;
@@ -416,15 +414,15 @@ int ipod_audio_set_alt(struct usb_function *func, unsigned intf, unsigned alt)
 	}
 
 	if (intf == audio->as_intf) {
-        audio->as_alt = alt;
-        switch(alt) {
-        case 0:
-            return ipod_audio_stop(audio);
-        case 1:
-            return ipod_audio_start(audio);
-        default:
-            return -EINVAL;
-        }
+		audio->as_alt = alt;
+		switch(alt) {
+		case 0:
+			return ipod_audio_stop(audio);
+		case 1:
+			return ipod_audio_start(audio);
+		default:
+			return -EINVAL;
+		}
 	}
 
 	return -EINVAL;
@@ -432,15 +430,15 @@ int ipod_audio_set_alt(struct usb_function *func, unsigned intf, unsigned alt)
 
 int ipod_audio_get_alt(struct usb_function *func, unsigned intf)
 {
-    struct ipod_audio *audio = func_to_ipod_audio(func);
+	struct ipod_audio *audio = func_to_ipod_audio(func);
 	DBG(func->config->cdev, " = %s() \n", __FUNCTION__);
 
-    if (intf == audio->ac_intf) {
+	if (intf == audio->ac_intf) {
 		return audio->ac_alt;
 	}
 
 	if (intf == audio->as_intf) {
-        return audio->as_alt;
+		return audio->as_alt;
 	}
 	
 	return -EINVAL;
@@ -472,41 +470,41 @@ void ipod_audio_resume(struct usb_function *func)
 
 int ipod_audio_bind(struct usb_configuration *conf, struct usb_function *func)
 {
-    int ret = 0;
+	int ret = 0;
 	int i;
-    struct ipod_audio *audio = func_to_ipod_audio(func);
-    DBG(conf->cdev, " = %s() \n", __FUNCTION__);
+	struct ipod_audio *audio = func_to_ipod_audio(func);
+	DBG(conf->cdev, " = %s() \n", __FUNCTION__);
 
-    audio->ac_intf = usb_interface_id(conf, func);
-    audio->ac_alt = 0;
-    if(audio->ac_intf < 0) {
-        return audio->ac_intf;
-    }
-    audio->as_intf = usb_interface_id(conf, func);
-    audio->as_alt = 0;
-    if(audio->as_intf < 0) {
-        return audio->as_intf;
-    }
+	audio->ac_intf = usb_interface_id(conf, func);
+	audio->ac_alt = 0;
+	if(audio->ac_intf < 0) {
+		return audio->ac_intf;
+	}
+	audio->as_intf = usb_interface_id(conf, func);
+	audio->as_alt = 0;
+	if(audio->as_intf < 0) {
+		return audio->as_intf;
+	}
 
 	ipod_audio_control_desc.bInterfaceNumber = audio->ac_intf;
-    ipod_audio_stream_0_desc.bInterfaceNumber = audio->as_intf;
-    ipod_audio_stream_1_desc.bInterfaceNumber = audio->as_intf;
+	ipod_audio_stream_0_desc.bInterfaceNumber = audio->as_intf;
+	ipod_audio_stream_1_desc.bInterfaceNumber = audio->as_intf;
 
 	audio->in_ep = usb_ep_autoconfig(conf->cdev->gadget, &ipod_audio_stream_1_endpoint_fs);
-    if (!audio->in_ep) {
-        return -ENODEV;
-    }
-    ipod_audio_stream_1_endpoint_hs.bEndpointAddress = ipod_audio_stream_1_endpoint_fs.bEndpointAddress;
+	if (!audio->in_ep) {
+		return -ENODEV;
+	}
+	ipod_audio_stream_1_endpoint_hs.bEndpointAddress = ipod_audio_stream_1_endpoint_fs.bEndpointAddress;
 
 	#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,6,0)
-    ret = usb_assign_descriptors(func, ipod_audio_desc_fs, ipod_audio_desc_hs, NULL, NULL);
+	ret = usb_assign_descriptors(func, ipod_audio_desc_fs, ipod_audio_desc_hs, NULL, NULL);
 	#else
 	ret = usb_assign_descriptors(func, ipod_audio_desc_fs, ipod_audio_desc_hs, NULL);
 	#endif
 
-    if(ret) {
-        return ret;
-    }
+	if(ret) {
+		return ret;
+	}
 
 	audio->rbuf = kzalloc(MAX_USB_AUDIO_PACKET_SIZE * NUM_USB_AUDIO_TRANSFERS, GFP_KERNEL);
 	audio->in_req = kzalloc(NUM_USB_AUDIO_TRANSFERS * sizeof(struct usb_request *), GFP_KERNEL);
@@ -549,11 +547,10 @@ int ipod_audio_bind(struct usb_configuration *conf, struct usb_function *func)
 		DBG(conf->cdev, "Coudn't create audio device: %d", ret);
 		goto snd_fail;
 	}
-    audio->pcm->private_data = audio;
+	audio->pcm->private_data = audio;
 
 	snd_pcm_set_ops(audio->pcm, SNDRV_PCM_STREAM_PLAYBACK, &ipod_audio_pcm_ops);
-	snd_pcm_lib_preallocate_pages_for_all(audio->pcm, SNDRV_DMA_TYPE_CONTINUOUS,
-										  snd_dma_continuous_data(GFP_KERNEL), 0, BUFFER_BYTES_MAX);
+	snd_pcm_lib_preallocate_pages_for_all(audio->pcm, SNDRV_DMA_TYPE_CONTINUOUS, snd_dma_continuous_data(GFP_KERNEL), 0, BUFFER_BYTES_MAX);
 	ret = snd_card_register(audio->card);
 	if (ret)
 	{
@@ -575,14 +572,14 @@ pdev_fail:
 
 void ipod_audio_unbind(struct usb_configuration *conf, struct usb_function *func)
 {
-    int i;
-    struct ipod_audio *audio = func_to_ipod_audio(func);
+	int i;
+	struct ipod_audio *audio = func_to_ipod_audio(func);
 	DBG(conf->cdev, " = %s() \n", __FUNCTION__);
 
 	if (audio->card != NULL)
 	{
 		snd_card_free(audio->card);
-        platform_device_del(audio->pdev);
+		platform_device_del(audio->pdev);
 		audio->card = NULL;
 		audio->pcm = NULL;
 		audio->pdev = NULL;
@@ -607,8 +604,8 @@ void ipod_audio_unbind(struct usb_configuration *conf, struct usb_function *func
 
 static void ipod_audio_free(struct usb_function *func) 
 {
-    struct ipod_audio *audio = func_to_ipod_audio(func);
-    kfree(audio);
+	struct ipod_audio *audio = func_to_ipod_audio(func);
+	kfree(audio);
 }
 
 static struct usb_function *ipod_audio_alloc(struct usb_function_instance *fi)
@@ -620,16 +617,16 @@ static struct usb_function *ipod_audio_alloc(struct usb_function_instance *fi)
 		return ERR_PTR(-ENOMEM);
 
 
-    audio->func.name = "ipod_audio";
-    audio->func.bind = ipod_audio_bind;
-    audio->func.unbind = ipod_audio_unbind;
-    audio->func.set_alt = ipod_audio_set_alt;
-    audio->func.get_alt = ipod_audio_get_alt;
-    audio->func.setup = ipod_audio_setup;
-    audio->func.disable = ipod_audio_disable;
-    audio->func.suspend = ipod_audio_suspend;
-    audio->func.resume = ipod_audio_resume;
-    audio->func.free_func = ipod_audio_free;
+	audio->func.name = "ipod_audio";
+	audio->func.bind = ipod_audio_bind;
+	audio->func.unbind = ipod_audio_unbind;
+	audio->func.set_alt = ipod_audio_set_alt;
+	audio->func.get_alt = ipod_audio_get_alt;
+	audio->func.setup = ipod_audio_setup;
+	audio->func.disable = ipod_audio_disable;
+	audio->func.suspend = ipod_audio_suspend;
+	audio->func.resume = ipod_audio_resume;
+	audio->func.free_func = ipod_audio_free;
 
 	return &audio->func;
 }
@@ -642,7 +639,7 @@ static void ipod_audio_free_inst(struct usb_function_instance *fi)
 static void ipod_attr_release(struct config_item *item)
 {
 	struct usb_function_instance *fi;
-    fi = container_of(to_config_group(item), struct usb_function_instance, group);
+	fi = container_of(to_config_group(item), struct usb_function_instance, group);
 	usb_put_function_instance(fi);
 }
 
@@ -652,7 +649,7 @@ static struct configfs_item_operations ipod_item_ops = {
 
 static struct config_item_type ipod_audio_func_type = {
 	.ct_owner	 = THIS_MODULE,
-    .ct_item_ops = &ipod_item_ops,
+	.ct_item_ops = &ipod_item_ops,
 };
 
 static struct usb_function_instance *ipod_audio_alloc_inst(void)
