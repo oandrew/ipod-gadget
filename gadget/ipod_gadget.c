@@ -30,7 +30,7 @@ MODULE_PARM_DESC(product_id, "Override USB Product ID");
 static struct usb_function_instance *fi_ms;
 static struct usb_function *f_ms;
 
-int ipod_config_ptp_bind(struct usb_configuration *conf)
+static int ipod_config_ptp_bind(struct usb_configuration *conf)
 {
 	int err;
 	DBG(conf->cdev, " = %s() \n", __FUNCTION__);
@@ -48,14 +48,14 @@ int ipod_config_ptp_bind(struct usb_configuration *conf)
 	return 0;
 }
 
-void ipod_config_ptp_unbind(struct usb_configuration *conf)
+static void ipod_config_ptp_unbind(struct usb_configuration *conf)
 {
 	DBG(conf->cdev, " = %s() \n", __FUNCTION__);
 	if (!IS_ERR_OR_NULL(f_ms)) {
 		usb_put_function(f_ms);
 	}
 }
-int ipod_config_ptp_setup(struct usb_configuration *conf, const struct usb_ctrlrequest *ctrl)
+static int ipod_config_ptp_setup(struct usb_configuration *conf, const struct usb_ctrlrequest *ctrl)
 {
 	DBG(conf->cdev, " = %s() \n", __FUNCTION__);
 	return 0;
@@ -78,7 +78,7 @@ static struct usb_function *ipod_hid_f;
 static struct usb_function_instance *ipod_audio_fi;
 static struct usb_function *ipod_audio_f;
 
-int ipod_config_bind(struct usb_configuration *conf)
+static int ipod_config_bind(struct usb_configuration *conf)
 {
 	
 	DBG(conf->cdev, " = %s() \n", __FUNCTION__);
@@ -89,11 +89,11 @@ int ipod_config_bind(struct usb_configuration *conf)
 	return 0;
 }
 
-void ipod_config_unbind(struct usb_configuration *conf)
+static void ipod_config_unbind(struct usb_configuration *conf)
 {
 	DBG(conf->cdev, " = %s() \n", __FUNCTION__);
 }
-int ipod_config_setup(struct usb_configuration *conf, const struct usb_ctrlrequest *ctrl)
+static int ipod_config_setup(struct usb_configuration *conf, const struct usb_ctrlrequest *ctrl)
 {
 	DBG(conf->cdev, " = %s() \n", __FUNCTION__);
 	return 0;

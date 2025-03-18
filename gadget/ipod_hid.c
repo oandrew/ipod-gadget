@@ -314,7 +314,7 @@ static bool ipod_hid_req_match(struct usb_function *func,const struct usb_ctrlre
 	return false;
 }
 
-int ipod_hid_setup(struct usb_function *func, const struct usb_ctrlrequest *ctrl)
+static int ipod_hid_setup(struct usb_function *func, const struct usb_ctrlrequest *ctrl)
 {
 	struct ipod_hid *hid = func_to_ipod_hid(func);
 	struct usb_composite_dev *cdev = func->config->cdev;
@@ -373,7 +373,7 @@ respond:
 	return status;
 }
 
-int ipod_hid_set_alt(struct usb_function *func, unsigned intf, unsigned alt)
+static int ipod_hid_set_alt(struct usb_function *func, unsigned intf, unsigned alt)
 {
 	struct ipod_hid *hid = func_to_ipod_hid(func);
 	int ret = 0;
@@ -410,7 +410,7 @@ int ipod_hid_set_alt(struct usb_function *func, unsigned intf, unsigned alt)
 	return -EINVAL;
 }
 
-void ipod_hid_disable(struct usb_function *func)
+static void ipod_hid_disable(struct usb_function *func)
 {
 	struct ipod_hid *hid = func_to_ipod_hid(func);
 	DBG(func->config->cdev, " = %s() \n", __FUNCTION__);
@@ -418,7 +418,7 @@ void ipod_hid_disable(struct usb_function *func)
 	usb_ep_disable(hid->in_ep);
 }
 
-int ipod_hid_bind(struct usb_configuration *conf, struct usb_function *func)
+static int ipod_hid_bind(struct usb_configuration *conf, struct usb_function *func)
 {
 	struct ipod_hid *hid = func_to_ipod_hid(func);
 	int ret = 0;
@@ -462,7 +462,7 @@ int ipod_hid_bind(struct usb_configuration *conf, struct usb_function *func)
 	return ret;
 }
 
-void ipod_hid_unbind(struct usb_configuration *conf, struct usb_function *func)
+static void ipod_hid_unbind(struct usb_configuration *conf, struct usb_function *func)
 {
 	struct ipod_hid *hid = func_to_ipod_hid(func);
 	DBG(conf->cdev, " = %s(), deactivs=%d\n", __FUNCTION__, conf->cdev->deactivations);
@@ -628,7 +628,11 @@ DECLARE_USB_FUNCTION(ipod_hid, ipod_hid_alloc_inst, ipod_hid_alloc);
 
 static int __init ipod_hid_mod_init(void)
 {
+	#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,4,0)
+	ipod_hid_class = class_create("iap");
+	#else
 	ipod_hid_class = class_create(THIS_MODULE, "iap");
+	#endif
 	if(IS_ERR(ipod_hid_class)) {
 		return PTR_ERR(ipod_hid_class);
 	}
