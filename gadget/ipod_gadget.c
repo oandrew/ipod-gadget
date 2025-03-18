@@ -185,7 +185,7 @@ static struct usb_composite_driver ipod_driver = {
 	.name = "g_ipod",
 	.dev = &device_desc,
 	.strings = ipod_strings,
-	.max_speed = USB_SPEED_HIGH,
+	.max_speed = USB_SPEED_FULL,
 
 	.bind = ipod_bind,
 	.unbind = ipod_unbind,
