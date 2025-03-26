@@ -29,6 +29,19 @@ It handles the authentication and activates the audio streaming so that ALSA dev
 
 # build and run
 
+## DKMS (Auto-build kernel modules)
+
+On the Raspberry PI:
+```
+sudo apt update && sudo apt upgrade
+sudo apt install dkms raspberrypi-kernel-headers
+
+sudo git clone https://github.com/oandrew/ipod-gadget.git /usr/src/ipod-gadget-0.1
+cd /usr/src/ipod-gadget-0.1
+sudo make dkms
+```
+
+Now everytime the kernel gets updated the kernel modules will be automatically rebuilt.
 
 ## kernel modules
 
