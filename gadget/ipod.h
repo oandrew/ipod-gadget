@@ -44,7 +44,7 @@ static struct usb_interface_descriptor ipod_audio_control_desc = {
 	.bInterfaceNumber = 0,
 	.bAlternateSetting =	0,
 	.bNumEndpoints =	0,
-	.bInterfaceClass =	1,
+	.bInterfaceClass =	USB_CLASS_AUDIO,
 	.bInterfaceSubClass =	USB_SUBCLASS_AUDIOCONTROL,
 	/* .iInterface		= DYNAMIC */
 };
@@ -89,7 +89,7 @@ static struct usb_interface_descriptor ipod_audio_stream_0_desc = {
 	.bInterfaceNumber = 1,
 	.bAlternateSetting =	0,
 	.bNumEndpoints =	0,
-	.bInterfaceClass =	1,
+	.bInterfaceClass =	USB_CLASS_AUDIO,
 	.bInterfaceSubClass = USB_SUBCLASS_AUDIOSTREAMING
 };
 
@@ -99,7 +99,7 @@ static struct usb_interface_descriptor ipod_audio_stream_1_desc = {
 	.bInterfaceNumber = 1,
 	.bAlternateSetting =	1,
 	.bNumEndpoints =	1,
-	.bInterfaceClass =	1,
+	.bInterfaceClass =	USB_CLASS_AUDIO,
 	.bInterfaceSubClass = USB_SUBCLASS_AUDIOSTREAMING
 };
 
@@ -199,7 +199,7 @@ static struct usb_interface_descriptor ipod_hid_desc = {
 	.bInterfaceNumber = 2,
 	.bAlternateSetting =	0,
 	.bNumEndpoints =	1,
-	.bInterfaceClass =	3,
+	.bInterfaceClass =	USB_CLASS_HID,
 	.bInterfaceSubClass =	0,
 	/* .iInterface		= DYNAMIC */
 };
@@ -240,15 +240,22 @@ static unsigned char ipod_hid_report[] = {
 
 static struct hid_descriptor ipod_hid_desc2 = {
 	.bLength =            9,
-	.bDescriptorType=    33,
+	.bDescriptorType=    HID_DT_HID,
 	.bcdHID= cpu_to_le16(0x0111),
 	.bCountryCode=             0,
 	.bNumDescriptors =      1,
-	.desc = {{
-		.bDescriptorType = 34,
+// https://github.com/oandrew/ipod-gadget/issues/32
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,12,34)
+	.rpt_desc = {
+		.bDescriptorType = HID_DT_REPORT,
 		.wDescriptorLength = cpu_to_le16(sizeof(ipod_hid_report))
 	}
-	}
+#else
+	.desc = {{
+		.bDescriptorType = HID_DT_REPORT,
+		.wDescriptorLength = cpu_to_le16(sizeof(ipod_hid_report))
+	}}
+#endif
 };
 
 
